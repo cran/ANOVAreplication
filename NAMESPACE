@@ -1,0 +1,9 @@
+exportPattern("^[[:alpha:]]+")
+importFrom("graphics", "abline", "hist", "par")
+importFrom("grDevices", "rgb")
+importFrom("stats", "coefficients", "lm", "median", "model.matrix",
+             "model.response", "plot.ts", "quantile", "resid", "rgamma",
+             "rnorm", "sd", "var")
+importFrom("quadprog","solve.QP")
+import(shiny)
+
