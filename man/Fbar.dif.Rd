@@ -28,7 +28,7 @@ Vanbrabant, L. (2017). restriktor: Restricted Statistical Estimation and Inferen
 M. A. J. Zondervan-Zwijnenburg
 }
 \seealso{
-See also \code{\link{Fbar.ineq}}, \code{\link{Fbar.dif}}, and \code{\link{Fbar.exact}}.
+See also \code{\link{runShiny}}, \code{\link{Fbar.ineq}}, and \code{\link{Fbar.exact}}.
 }
 \examples{
 data <- data.frame(y=ChickWeight$weight,g=ChickWeight$Diet)

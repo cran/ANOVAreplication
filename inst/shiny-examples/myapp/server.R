@@ -304,8 +304,9 @@ shinyServer(function(input, output, session) {
   #prior predictive check ####
   results.ppc <- reactive({
     if (input$runButton_priorpred == 0){return()}
-    if (is.null(output_Gibbs())){stop("Obtain the posterior distribution in the Original Study tab first.")}
-    if (is.null(data_r())){stop("Upload data or provide descriptives in the New Study tab first.")}
+    validate(need(output_Gibbs(),message="Obtain the posterior distribution in the Original Study tab first."))
+    validate(need(!is.null(data_r())|!is.null(data_descr_r()),
+                  message="Upload data or provide descriptives in the New Study tab first."))
 
     isolate({
       if (input$typepriorinput == 1){data_o.work <- data_o()}
@@ -328,7 +329,9 @@ shinyServer(function(input, output, session) {
         for(i in 1:input$nh){
           Amat[i,Amat_3a[i]] <- 1
           Amat[i,Amat_3b[i]] <- -1}
-        if (exists("Amat")==FALSE){stop("Provide inequality constraints")}
+        validate(need(Amat,message="Provide inequality constraints."))
+        validate(need(all(apply(Amat,1,sum)==0),message="Parameter cannot be > itself, adjust constraints"))
+
         exact=0L
 
         if (input$addDif==0){difmin=0L
@@ -341,7 +344,7 @@ shinyServer(function(input, output, session) {
           difmin_3 <- lapply(1:input$nh,function(i) as.numeric(difmin_2[[i]]))
           difmin <- do.call(c,difmin_3)
 
-          if (exists("difmin")==FALSE){stop("Provide minimum differences.")}
+          validate(need(difmin!="",message="Provide minimum differences."))
 
           Fstat <<- Fbar.dif(data_r.work,Amat,difmin)[1]
           statistic="dif"; effectsize=FALSE}
@@ -352,7 +355,7 @@ shinyServer(function(input, output, session) {
           difmin_3 <- lapply(1:input$nh,function(i) as.numeric(difmin_2[[i]]))
           difmin <- do.call(c,difmin_3)
 
-          if (exists("difmin")==FALSE){stop("Provide minimum effect size differences.")}
+          validate(need(difmin!="",message="Provide minimum differences."))
 
           Fstat <<- Fbar.dif(data_r.work,Amat,difmin,effectsize=TRUE)[1]
           statistic="dif"; effectsize=TRUE}
@@ -361,7 +364,7 @@ shinyServer(function(input, output, session) {
       if (input$typehypothesis == "exact"){
         Amat = 0L; difmin=0L
         exact = as.numeric(unlist(strsplit(input$exactval,",")))
-        if (exists("exact")==FALSE){stop("Provide the values to replicate.")}
+        validate(need(exact!="",message="Provide the values to replicate."))
         Fstat <<- Fbar.exact(data_r.work,exact)[1]
         statistic="exact"; effectsize=FALSE}
 
@@ -381,20 +384,23 @@ shinyServer(function(input, output, session) {
   Mode <- function(x) {
     ux <- unique(x)
     ux[which.max(tabulate(match(x, ux)))]}
-  
+
   observe({
     if (is.null(results.ppc())){return()}
+    #par(mar = rep(2, 4))
     h <<- hist(Fbar[-which(Fbar==Mode(Fbar))],breaks=20)
   })
 
   plotInput <- function(){
     if(sum(Fbar==Mode(Fbar))/length(Fbar)>=.10){
       hist(Fbar[-which(Fbar==Mode(Fbar))],ylim=c(0,max(sum(Fbar==Mode(Fbar)),h$counts[1])),
-           xlab=expression(italic(bar(F)[bold(y)][r])),ylab="Frequency",main="",breaks=20)
+           xlim=c(0,max(max(Fbar),Fstat)),
+           xlab=expression(italic(bar(F)[bold(y)])),ylab="Frequency",main="",breaks=20)
       segments(x0=Mode(Fbar),y0=0,x1=Mode(Fbar),y1=sum(Fbar==Mode(Fbar)),col="black",lwd=5)
       abline(v=Fstat,col="red")
     }else{
-      hist(Fbar,freq=TRUE,breaks=seq(0,max(Fbar),length.out=40))
+      hist(Fbar,freq=TRUE,breaks=seq(0,max(Fbar),length.out=40),xlim=c(0,max(max(Fbar),Fstat)),
+           xlab=expression(italic(bar(F)[bold(y)])),ylab="Frequency",main="")
       abline(v=Fstat,col="red")}
   }
 
@@ -422,13 +428,17 @@ shinyServer(function(input, output, session) {
 
     if(sum(Fbar==Mode(Fbar))/length(Fbar)>=.10){
       h <- hist(Fbar[-which(Fbar==Mode(Fbar))],ylim=c(0,sum(Fbar==Mode(Fbar))),xlab=expression(italic(bar(F)[bold(y)][r])),ylab="Frequency",main="",breaks=20)
-      hist(Fbar[-which(Fbar==Mode(Fbar))],ylim=c(0,max(sum(Fbar==Mode(Fbar)),h$counts[1])),xlab=expression(italic(bar(F)[bold(y)][r])),ylab="Frequency",main="",breaks=20)
-      segments(x0=0,y0=0,x1=0,y1=sum(Fbar==Mode(Fbar)),col="black",lwd=5)
+      hist(Fbar[-which(Fbar==Mode(Fbar))],ylim=c(0,max(sum(Fbar==Mode(Fbar)),h$counts[1])),
+           xlim=c(0,max(max(Fbar),Fstat)),
+           xlab=expression(italic(bar(F)[bold(y)])),ylab="Frequency",main="",breaks=20)
+      segments(x0=Mode(Fbar),y0=0,x1=Mode(Fbar),y1=sum(Fbar==Mode(Fbar)),col="black",lwd=5)
       abline(v=Fstat,col="red")
     }else{
-      hist(Fbar,freq=FALSE,breaks=seq(0,max(Fbar),length.out=40))
+      hist(Fbar,freq=TRUE,breaks=seq(0,max(Fbar),length.out=40),xlim=c(0,max(max(Fbar),Fstat)),
+           xlab=expression(italic(bar(F)[bold(y)])),ylab="Frequency",main="")
       abline(v=Fstat,col="red")}
   })
+
   output$helptext2 <- renderText({
     if (is.null(results.ppc())){return()}
     paste(
@@ -451,13 +461,11 @@ shinyServer(function(input, output, session) {
   #sample size calculator ####
   results.ppp <- reactive({
     if (input$runButton_sampcalc == 0){return()}
-    if (is.null(output_Gibbs())){stop("Obtain the posterior distribution in the Original Study tab first.")}
+    validate(need(output_Gibbs(),message="Obtain the posterior distribution in the Original Study tab first."))
 
     isolate({
       if (input$typepriorinput == 1){data_o.work <- data_o()}
       if (input$typepriorinput == 2){data_o.work <- data_descr()}
-
-      n.r <- as.numeric(table(data_o.work[,2]))
 
       if (input$typehypothesis_N == "ineq"){
         Amat_1a <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_a', i)]])
@@ -509,7 +517,7 @@ shinyServer(function(input, output, session) {
   observe({
     # Change the selected tab.
     if (input$runButton_sampcalc == 1) {
-      updateTabsetPanel(session, "outputTabset", selected = "Sample Size Output")}
+      updateTabsetPanel(session, "outputTabset", selected = "Sample Size & Power Output")}
   })
 
   output$sampcalc <- renderPrint({
@@ -519,7 +527,7 @@ shinyServer(function(input, output, session) {
 
   output$Fpspower<- renderPlot({
     if (is.null(results.ppp())){return()}
-    hist(Fps.power.H0,freq=FALSE,col=rgb(1,0,0,1/4),border=rgb(1,0,0,1/2),main="",xlab=expression(bar(F))) #null with true effect
+    hist(Fps.power.H0,freq=FALSE,col=rgb(1,0,0,1/4),border=rgb(1,0,0,1/2),main="",xlab=expression(italic(bar(F)[bold(y)]))) #null with true effect
     hist(Fps.power.H1,freq=FALSE,col=rgb(0,0,1,1/4),border=rgb(0,0,1,1/2),add=TRUE) #H1, means equal
     abline(v=rej.value,col=rgb(1,0,1,1/2),lwd=2)
   })
@@ -532,6 +540,90 @@ shinyServer(function(input, output, session) {
       "Subsequently, the matrix with the output is given. ",
       "The number in column n per group is the sample size per group, the value on the right is the associated power.",
       "The histogram is based on information for the last sample size and power calculated.",
+      "The red distribution is composed of F-bars for datasets from a population in which replication holds (i.e., the null distribution). ",
+      "The blue distribution shows F-bars from a population with equal means for which replication should be rejected (i.e., the alternative distribution).",
+      "The vertical line indicates the critical value located at 1-alpha'th percentile of the null distribution. ",
+      "The proportion of the alternative distribution at the right side of the critical value constitutes statical power. ")
+  })
+  
+  #power calculator ####
+  results.basicpower <- reactive({
+    if (input$runButton_powercalc == 0){return()}
+    validate(need(output_Gibbs(),message="Obtain the posterior distribution in the Original Study tab first."))
+    
+    isolate({
+      if (input$typepriorinput == 1){data_o.work <- data_o()}
+      if (input$typepriorinput == 2){data_o.work <- data_descr()}
+      
+      n.r <- as.numeric(unlist(strsplit(input$nF,",")))
+      
+      if (input$typehypothesis_N == "ineq"){
+        Amat_1a <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_a', i)]])
+        Amat_2a <- lapply(1:input$nh_N,function(i) unlist(Amat_1a[[i]]))
+        Amat_3a <- do.call(c,Amat_2a)
+        
+        Amat_1b <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_b', i)]])
+        Amat_2b <- lapply(1:input$nh_N,function(i) unlist(Amat_1b[[i]]))
+        Amat_3b <- do.call(c,Amat_2b)
+        
+        Amat_N <- matrix(0,nrow = input$nh_N,ncol=data_o.gibbs$p)
+        for(i in 1:input$nh_N){
+          Amat_N[i,Amat_3a[i]] <- 1
+          Amat_N[i,Amat_3b[i]] <- -1}
+        
+        exact_N=0L;
+        
+        if (input$addDif_N==0){difmin_N=0L; effectsize_N = FALSE; statistic="ineq"}
+        if (input$addDif_N==1){ #absolute differences
+          difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
+          difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
+          difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
+          difmin_N <- do.call(c,difmin_3); effectsize_N = FALSE; statistic="dif"}
+        if (input$addDif_N==2){ #effect size differences
+          difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
+          difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
+          difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
+          difmin_N <- do.call(c,difmin_3)
+          effectsize_N = TRUE; statistic="dif"}
+      }
+      if (input$typehypothesis_N == "exact"){
+        Amat_N = 0L; difmin_N=0L; statistic="exact"; effectsize_N = FALSE
+        exact_N = as.numeric(unlist(strsplit(input$exactval_N,",")))}
+      
+      output_G <- output_Gibbs()
+      #nsample= dim(output_G)[1]
+      #sample.r <- sample(1:dim(output_G)[1],nsample)
+      
+      outputpowercalc <<- power.basic(nF=n.r,posterior=output_G,g.m=mean(data_o.work$y),
+                                   statistic=statistic,Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
+                                   alpha=as.numeric(input$alpha))
+      
+    })
+  })
+  
+  observe({
+    # Change the selected tab.
+    if (input$runButton_powercalc == 1) {
+      updateTabsetPanel(session, "outputTabset", selected = "Sample Size & Power Output")}
+  })
+  
+  output$powercalc <- renderPrint({
+    if (is.null(results.basicpower())){return(invisible())}
+    outputpowercalc
+  })
+  
+  output$Fpsbasicpower<- renderPlot({
+    if (is.null(results.basicpower())){return()}
+    hist(Fps.power.H0,freq=FALSE,col=rgb(1,0,0,1/4),border=rgb(1,0,0,1/2),main="",xlab=expression(italic(bar(F)[bold(y)]))) #null with true effect
+    hist(Fps.power.H1,freq=FALSE,col=rgb(0,0,1,1/4),border=rgb(0,0,1,1/2),add=TRUE) #H1, means equal
+    abline(v=rej.value,col=rgb(1,0,1,1/2),lwd=2)
+  })
+  
+  output$helptext3power <- renderText({
+    if (is.null(results.basicpower())){return()}
+    paste(
+      "Below you can find the results of the power calculator for the prior predictive check. ",
+      "In print, the observed power and the 1-alpha'th value of the null distribution are provided. ",
       "The red distribution is composed of F-bars for datasets from a population in which replication holds (i.e., the null distribution). ",
       "The blue distribution shows F-bars from a population with equal means for which replication should be rejected (i.e., the alternative distribution).",
       "The vertical line indicates the critical value located at 1-alpha'th percentile of the null distribution. ",

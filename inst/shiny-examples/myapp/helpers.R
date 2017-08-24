@@ -16,7 +16,7 @@ library(quadprog)
 Fbar.ineq <- function(data,Amat){
   names(data) <- c("V1","V2")
   fit.lm <- lm(V1~as.factor(V2)-1,data)                   #lm, no intercept (!)
-  mfit <- fit.lm$model                                    
+  mfit <- fit.lm$model
   Y <- model.response(mfit)                               #the data stored in Y
   X <- model.matrix(fit.lm)[,,drop = FALSE]               #dummies
   s2 <- summary(fit.lm)$sigma^2                           #Residual Standard Error squared
@@ -25,13 +25,13 @@ Fbar.ineq <- function(data,Amat){
   out.h0 <- solve.QP(Dmat = XX, dvec = Xy, Amat = t(Amat))
   RSS.h0 <- sum((Y - (X %*% out.h0$solution))^2)
   RSS.ha <- sum((Y - (X %*% out.h0$unconstrained.solution))^2)
-  #hypothesis test Type B 
+  #hypothesis test Type B
   Fresult <<- (RSS.h0 - RSS.ha)/s2
   return(Fresult)
 }
 
 #Fbar for exact values. For conceptual replication, use standardized dependent, and standardized exact values
-#data = data.frame, exact=the exact values for each of the parameters 
+#data = data.frame, exact=the exact values for each of the parameters
 #possible extension: exact value for some parameters
 Fbar.exact <- function(data,exact){
   names(data) <- c("V1","V2")
@@ -43,7 +43,7 @@ Fbar.exact <- function(data,exact){
   df.error <- summary(fit.lm)$fstatistic[[3]]             #error df
   RSS.h0 <- sum((Y - (X %*% exact))^2)
   RSS.ha <- sum((Y - (X %*% fit.lm$coefficients))^2)
-  #hypothesis test Type B 
+  #hypothesis test Type B
   Fresult <<- (RSS.h0 - RSS.ha)/s2
   return(Fresult)
 }
@@ -65,15 +65,15 @@ Fbar.dif <- function(data,Amat, difmin, effectsize=FALSE){
     n.r <- as.numeric(table(data[,2]))
     s <- unlist(lapply(1:dim(Amat)[1], FUN=function(x,i){
       sqrt(((n.r[a[i]]-1)*var(x$V1[which(x$V2==a[i])])+(n.r[b[i]]-1)*var(x$V1[which(x$V2==b[i])]))/
-             (n.r[a[i]]+n.r[b[i]]-2))},x=as.list(data)))    
+             (n.r[a[i]]+n.r[b[i]]-2))},x=as.list(data)))
     out.h0 <- solve.QP(Dmat = XX, dvec = Xy, Amat = t(Amat),bvec=difmin*s)
   }else{
     out.h0 <- solve.QP(Dmat = XX, dvec = Xy, Amat = t(Amat),bvec=difmin)
-  }  
+  }
   #print(out.h0$solution) #print(out.h0$unconstrained.solution)
   RSS.h0 <- sum((Y - (X %*% out.h0$solution))^2)
   RSS.ha <- sum((Y - (X %*% out.h0$unconstrained.solution))^2)
-  #hypothesis test Type B 
+  #hypothesis test Type B
   Fresult <<- (RSS.h0 - RSS.ha)/s2
   return(Fresult)
 }
@@ -102,32 +102,56 @@ prior.predictive.check <- function(n,posterior,statistic,obs=TRUE,F_obs,
     x <- array(NA, dim=c(N,1,it))
     data.rep <- list()
     # Create a Progress object
-    progress <- shiny::Progress$new()
+    progress <- shiny::Progress$new(min=0,max=it)
     # Make sure it closes when we exit this reactive, even if there's an error
     on.exit(progress$close())
 
     progress$set(message = "Simulating data", value = 0)
     for (l in 1:it){
       #create data from normal prior based on sampled values
-      if(l %% 1000==0) {progress$inc(1/it, detail = paste("Sample", l))}
+      if(l %% 1000==0) {progress$inc(it, detail = paste("Sample", l))}
       for (i in 1:p){
         x[(sum(n[1:i])+1-n[i]):sum(n[1:i]),1,l] <- c(rep(i,n[i]))
         y[(sum(n[1:i])+1-n[i]):sum(n[1:i]),1,l] <- c(rnorm(n=n[i],mean=posterior[l,i],sd=posterior[l,p+1]))}
       data.rep[[l]] <- as.data.frame(cbind(y[,1,l],x[,1,l]))}
   }else{data.rep=data.rep} #else, use existing p(y)
   #on each dataset, apply the function of interest and store results (Fbar & df-error) in Fps
+
+  lapply_pb <- function(X, FUN, ...)
+  {
+    env <- environment()
+    pb_Total <- length(X)
+    counter <- 0
+    pb <- Progress$new(min=0, max = pb_Total)
+
+    # wrapper around FUN
+    wrapper <- function(...){
+      curVal <- get("counter", envir = env)
+      pb$set(value = curVal +1)
+      if(curVal %% 100==0) {
+        pb$inc(curVal, message = "Calculating", detail = paste("Fbar", curVal))
+        }
+      assign("counter", curVal +1 ,envir=env)
+      #setTxtProgressBar(get("pb", envir=env), curVal +1)
+      FUN(...)
+    }
+    res <- lapply(X, wrapper, ...)
+    on.exit(pb$close())
+    res
+  }
+
   if(statistic=="ineq"){
     Fps <<- matrix(unlist(
-      lapply(X=data.rep, FUN = function(x){Fbar.ineq(x,Amat=Amat)})),ncol=1,byrow=TRUE)}
+      lapply_pb(X=data.rep, FUN = function(x){Fbar.ineq(x,Amat=Amat)})),ncol=1,byrow=TRUE)}
   if(statistic=="exact"){
     Fps <<- matrix(unlist(
-      lapply(X=data.rep, FUN = function(x){Fbar.exact(x,exact=exact)})),ncol=1,byrow=TRUE)}
+      lapply_pb(X=data.rep, FUN = function(x){Fbar.exact(x,exact=exact)})),ncol=1,byrow=TRUE)}
   if(statistic=="dif"&effectsize==FALSE){
     Fps <<- matrix(unlist(
-      lapply(X=data.rep, FUN = function(x){Fbar.dif(x,Amat=Amat,difmin=difmin)})),ncol=1,byrow=TRUE)}
+      lapply_pb(X=data.rep, FUN = function(x){Fbar.dif(x,Amat=Amat,difmin=difmin)})),ncol=1,byrow=TRUE)}
   if(statistic=="dif"&effectsize==TRUE){
     Fps <<- matrix(unlist(
-      lapply(X=data.rep, FUN = function(x){Fbar.dif(x,Amat=Amat,difmin=difmin,effectsize=TRUE)})),ncol=1,byrow=TRUE)}
+      lapply_pb(X=data.rep, FUN = function(x){Fbar.dif(x,Amat=Amat,difmin=difmin,effectsize=TRUE)})),ncol=1,byrow=TRUE)}
   if(obs==TRUE){
     #calculate proportion of replicated F more extreme than observed = p-value, one-sided
     ppp <<- sum(Fps>=F_obs)/it
@@ -228,3 +252,36 @@ power.ppp <- function(start_n,powtarget=.825,powmargin=.025,posterior,g.m,statis
 
   return.info <- list(stop,Npower.l[1:it,])
   return(return.info)}
+
+#function to calculate power post-hoc with Ha: mu1 = mu.. = muJ
+power.basic <- function(nF,posterior,g.m,statistic,Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,alpha=.05,breaksize=round(rej.value,2)){
+  p <- ncol(posterior)-1    #number of groups
+  lFps <- dim(posterior)[1] #length future Fps
+  
+  #null distribution = F scores for original dataset
+  prior.predictive.check(n=nF,posterior=posterior,obs=FALSE,
+                         statistic=statistic,Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize)
+  #rejection value is max 5% of H0
+  Fps.power.H0 <- Fps
+  rej.value <- quantile(Fps.power.H0, 1-alpha)
+  
+  #alternative distr. = F scores when all group means are equal (value = general mean original)
+  #the SE of posterior/prior means is derived from the original posterior
+  #the SD of the y-data is that of the original posterior
+  posteriormeans.A <- matrix(NA,nrow=lFps,ncol=p)
+  for (i in 1:p){posteriormeans.A[,i] <- rnorm(lFps,mean=g.m,sd=apply(posterior[,1:p],2,sd))}
+  prior.predictive.check(n=nF,posterior=cbind(posteriormeans.A,posterior[,p+1]),
+                         obs=FALSE,statistic=statistic,Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize)
+  Fps.power.H1 <- Fps
+  
+  #power, proportion F's more extreme than rej value based on null distribution (F's original)
+  power.out <- sum(Fps.power.H1>rej.value)/length(Fps.power.H1)
+  
+  Fps.power.H0 <<- Fps.power.H0
+  Fps.power.H1 <<- Fps.power.H1
+  rej.value <<- rej.value
+
+  return.info <- list(power=power.out,rejection.value=quantile(Fps.power.H0, 1-alpha))
+  return(return.info)
+}
+

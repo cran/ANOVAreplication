@@ -35,7 +35,7 @@ Zondervan-Zwijnenburg, M.A.J., Van de Schoot, R., & Hoijtink, H. (2017). Testing
 \author{
 M.A.J. Zondervan-Zwijnenburg}
 \seealso{
-See also \code{\link{prior.predictive.check}}, \code{\link{Fbar.ineq}}, \code{\link{Fbar.dif}}, and \code{\link{Fbar.exact}}.
+See also \code{\link{runShiny}}, \code{\link{prior.predictive.check}}, \code{\link{power.calc}}, \code{\link{Fbar.ineq}}, \code{\link{Fbar.dif}}, and \code{\link{Fbar.exact}}.
 }
 \examples{
 #analysis original data
@@ -51,4 +51,3 @@ sample.size.calc(start_n=60, powtarget=.825,powmargin=.025,posterior=output_m,
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
 \keyword{htest}
-\keyword{nonparametric }

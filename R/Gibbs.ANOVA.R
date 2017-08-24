@@ -1,7 +1,8 @@
 
-Gibbs.ANOVA <- function(data,it=5000,burnin=500){
+Gibbs.ANOVA <- function(data,it=5000,burnin=500,seed=0){
   #R program for Gibbs sampling from conditionals
 
+  if(seed!=0){set.seed(seed)}
   I=it+burnin                                      #number of iterations
   #read only observations with complete information
   x=data$g
@@ -50,8 +51,8 @@ Gibbs.ANOVA <- function(data,it=5000,burnin=500){
 
   }
 
-results <- cbind(round(apply(output_m,2,mean),4),round(apply(output_m,2,median),4),
-                 round(apply(output_m,2,sd),4))
-colnames(results) <- c("mean","median","sd")
+  results <- cbind(round(apply(output_m,2,mean),4),round(apply(output_m,2,median),4),
+                   round(apply(output_m,2,sd),4))
+  colnames(results) <- c("mean","median","sd")
   return(results)
 }

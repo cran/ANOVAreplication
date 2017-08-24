@@ -2,23 +2,23 @@ library(shiny)
 
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
-  
+
   titlePanel("ANOVA Replication App"),
-  withTags({  
-    tags$p("This application is associated with the paper: Zondervan-Zwijnenburg, M.A.J., Van de Schoot, R., and 
-        Hoijtink, H. (2017). Testing ANOVA replication by means of the prior predictive p-value. 
-        With the application the replication of specific ANOVA features can be tested by means of a sampling-based prior predictive check. 
-        Additionally, the total sample size can be calculated to reject replication for populations with equal means.
-       Associated files and documentation can be found at",tags$a(href="https://osf.io/6h8x3","osf.io/6h8x3"),".")
+  withTags({
+    tags$p("This application is associated with the paper: Zondervan-Zwijnenburg, M.A.J., Van de Schoot, R., and
+           Hoijtink, H. (2017). Testing ANOVA replication by means of the prior predictive p-value.
+           With the application the replication of specific ANOVA features can be tested by means of a sampling-based prior predictive check.
+           Additionally, the total sample size can be calculated to reject replication for populations with equal means.
+           Associated files and documentation can be found at",tags$a(href="https://osf.io/6h8x3","osf.io/6h8x3"),".")
   }),
   hr(),
   HTML(paste(tags$span(style = "color:#bfbfbf", "By using this app you agree to be bound by the Terms of Usage."))),
   hr(),
-  
+
   sidebarLayout(position = "left",
                 sidebarPanel(width=6,
-                             
-                             tabsetPanel(id="inputTabset",type = "tabs",position="above",
+
+                             tabsetPanel(id="inputTabset",type = "tabs",
                                          tabPanel("Original Study",
                                                   br(),
                                                   p("As a first step to test replication, a summary of the parameters based on the original data needs to be obtained.",
@@ -28,17 +28,17 @@ shinyUI(fluidPage(
                                                     "Afterwards, you can continue to upload (summary statistics of) the New Study in the next tab, or calculate the required sample size for a new study with the Sample Size Calculator"),
                                                   #p("The prior predictive check requires prior specifications for each parameter of the ANOVA (i.e., the group means, and the common variance).
                                                   #To provide this input you can submit the original data or administer prior distributions for each of the parameters directly. When you submit
-                                                  #original data, the application will conduct a Bayesian analysis, and select the the posterior distributions as prior input for the prior predictive check 
+                                                  #original data, the application will conduct a Bayesian analysis, and select the the posterior distributions as prior input for the prior predictive check
                                                   #(see also Zondervan-Zwijnenburg et al., 2016)"),
-                                                  radioButtons("typepriorinput", 
-                                                               label = h5("Type of input original study"), 
+                                                  radioButtons("typepriorinput",
+                                                               label = h5("Type of input original study"),
                                                                choices = list("Provide original data" = 1,
                                                                               "Provide original data descriptives" = 2
                                                                               #,"Provide prior distributions" = 3),
                                                                ),selected=character(0)),
                                                   conditionalPanel("input.typepriorinput == 1",
-                                                                   p("Upload a csv file with in the first column the dependent variable,", 
-                                                                     "and in the second column variable indicating group membership.", 
+                                                                   p("Upload a csv file with in the first column the dependent variable,",
+                                                                     "and in the second column variable indicating group membership.",
                                                                      "Use the options below to let the app read the data correctly. You can check your upload in the panel on the right."),
                                                                    fileInput('file_o', 'Choose CSV File',
                                                                              accept=c('text/csv', 'text/comma-separated-values,text/plain', '.csv')),
@@ -54,11 +54,11 @@ shinyUI(fluidPage(
                                                                    lapply(1:10, function(i){
                                                                      conditionalPanel(paste0('input.n1 >=' ,i),
                                                                                       bootstrapPage(
-                                                                                        div(style="display:inline-block",textInput(paste0('groupmean',i), label = h5(paste0('Mean group ',i)), 
+                                                                                        div(style="display:inline-block",textInput(paste0('groupmean',i), label = h5(paste0('Mean group ',i)),
                                                                                                                                    value = "", width = '75%')),
-                                                                                        div(style="display:inline-block",textInput(paste0('groupsd',i), label = h5(paste0('SD group ',i)), 
+                                                                                        div(style="display:inline-block",textInput(paste0('groupsd',i), label = h5(paste0('SD group ',i)),
                                                                                                                                    value = "", width = '75%')),
-                                                                                        div(style="display:inline-block",textInput(paste0('groupn',i), label = h5(paste0('Sample size group ',i)), 
+                                                                                        div(style="display:inline-block",textInput(paste0('groupn',i), label = h5(paste0('Sample size group ',i)),
                                                                                                                                    value = "", width = '75%'))))}),
                                                                    actionButton("runButton_descr", "Generate data"),
                                                                    tags$hr()),
@@ -67,9 +67,9 @@ shinyUI(fluidPage(
                                                                                min = 2, max = 10, value = 2, step = 1),
                                                                    lapply(1:10, function(i){
                                                                      conditionalPanel(paste0('input.n2 >=' ,i),
-                                                                                      textInput(paste0('priorgroupmean',i), label = h5(paste0('Prior distribution mean group ',i)), 
+                                                                                      textInput(paste0('priorgroupmean',i), label = h5(paste0('Prior distribution mean group ',i)),
                                                                                                 value = "", width = '35%'))}),
-                                                                   textInput("priorvariance", label = h5("Prior distribution variance"), 
+                                                                   textInput("priorvariance", label = h5("Prior distribution variance"),
                                                                              value = "", width = '35%')),
                                                   hr(),
                                                   conditionalPanel("input.typepriorinput != 3",
@@ -78,28 +78,28 @@ shinyUI(fluidPage(
                                                                      "We recommend to start with 5000 post-burnin iterations for each of the two chains. Trace plots will appear in the main panel.",
                                                                      "If convergence is not obtained, increase the number of iterations below"),
                                                                    bootstrapPage(
-                                                                     div(style="display:inline-block",textInput("n.burnin", label = h5("Number of burnin iterations to run per chain"), 
+                                                                     div(style="display:inline-block",textInput("n.burnin", label = h5("Number of burnin iterations to run per chain"),
                                                                                                                 value = "500", width = '4.5cm')),
-                                                                     div(style="display:inline-block",textInput("n.iter", label = h5("Number of (post-burnin) iterations to run per chain"), 
+                                                                     div(style="display:inline-block",textInput("n.iter", label = h5("Number of (post-burnin) iterations to run per chain"),
                                                                                                                 value = "5000", width = '4.5cm')),
-                                                                     div(style="display:inline-block",textInput("seed_G", label = h5("To obtain fixed results, set a seed value other than 0."), 
+                                                                     div(style="display:inline-block",textInput("seed_G", label = h5("To obtain fixed results, set a seed value other than 0."),
                                                                                                                 value = "0", width = '4.5cm'))), br(),
                                                                    actionButton("runButton", "Obtain the posterior"))
                                          ),
-                                         
+
                                          tabPanel("New Study",
                                                   br(),
                                                   p("Submit the data of the new study (sometimes called replication study), or provide descriptive statistics to simulate the new data.",
                                                     "Afterwards, you can proceed to the Replication Test tab. The new data input is not required for new study sample size calculations."),
-                                                  radioButtons("typerepinput", 
-                                                               label = h5("Type of input new study"), 
+                                                  radioButtons("typerepinput",
+                                                               label = h5("Type of input new study"),
                                                                choices = list("Provide new data" = 1,
                                                                               "Provide new data descriptives" = 2
                                                                               #,"Provide prior distributions" = 3),
                                                                ),selected = character(0)),
                                                   conditionalPanel("input.typerepinput == 1",
-                                                                   p("Upload a csv file with in the first column the dependent variable,", 
-                                                                     "and in the second column variable indicating group membership.", 
+                                                                   p("Upload a csv file with in the first column the dependent variable,",
+                                                                     "and in the second column variable indicating group membership.",
                                                                      "Use the options below to let the app read the data correctly. You can check your upload in the panel on the right."),
                                                                    fileInput('file_r', 'Choose CSV File',
                                                                              accept=c('text/csv', 'text/comma-separated-values,text/plain', '.csv')),
@@ -115,45 +115,45 @@ shinyUI(fluidPage(
                                                                    lapply(1:10, function(i){
                                                                      conditionalPanel(paste0('input.nr1 >=' ,i),
                                                                                       bootstrapPage(
-                                                                                        div(style="display:inline-block",textInput(paste0('groupmean_r',i), label = h5(paste0('Mean group ',i)), 
+                                                                                        div(style="display:inline-block",textInput(paste0('groupmean_r',i), label = h5(paste0('Mean group ',i)),
                                                                                                                                    value = "", width = '75%')),
-                                                                                        div(style="display:inline-block",textInput(paste0('groupsd_r',i), label = h5(paste0('SD group ',i)), 
+                                                                                        div(style="display:inline-block",textInput(paste0('groupsd_r',i), label = h5(paste0('SD group ',i)),
                                                                                                                                    value = "", width = '75%')),
-                                                                                        div(style="display:inline-block",textInput(paste0('groupn_r',i), label = h5(paste0('Sample size group ',i)), 
+                                                                                        div(style="display:inline-block",textInput(paste0('groupn_r',i), label = h5(paste0('Sample size group ',i)),
                                                                                                                                    value = "", width = '75%'))))}),
-                                                                   actionButton("runButton_descr_r", "Generate data"))),     
-                                         
+                                                                   actionButton("runButton_descr_r", "Generate data"))),
+
                                          tabPanel("Replication Test",
                                                   br(),
                                                   p("1. Specify the features of the original study that are relevant to replication. Base your hypothesis on the original study.",
                                                     "2. Run the prior predictive check to obtain the posterior predictive p-value."),
-                                                  radioButtons("typehypothesis", 
-                                                               label = h5("Type of hypothesis"), 
+                                                  radioButtons("typehypothesis",
+                                                               label = h5("Type of hypothesis"),
                                                                choices = list("Inequality constraint(s)" = "ineq",
                                                                               "Exact mean values" = "exact"),
                                                                selected = character(0)),
                                                   conditionalPanel("input.typehypothesis == 'ineq'",
                                                                    sliderInput("nh", "Number of constraints:",
                                                                                min = 1, max = 10, value = 1, step = 1),
-                                                                   p("Specify your pairwise contrasts below.", "The data consists of a number of groups, which each have a mean.", 
+                                                                   p("Specify your pairwise contrasts below.", "The data consists of a number of groups, which each have a mean.",
                                                                      "If the mean of group 1 is expected to be larger than that of group 2 based on the original data, your contrast is: 1>2.",
                                                                      "The larger mean of the contrast is to be put on the left, while the smaller mean of the contrast is to put on the right side of the > symbol."),
-                                                                   
+
                                                                    lapply(1:10, function(i){
                                                                      conditionalPanel(paste0('input.nh >=' ,i),
                                                                                       bootstrapPage(
-                                                                                        div(style="display:inline-block",numericInput(paste0('Amat_a',i), label = h5(paste0('Constraint ',i)), 
+                                                                                        div(style="display:inline-block",numericInput(paste0('Amat_a',i), label = h5(paste0('Constraint ',i)),
                                                                                                                                       value=1,min=1, max=15, width = '2.5cm')),
                                                                                         div(style="display:inline-block",p(">")),
                                                                                         div(style="display:inline-block",numericInput(paste0('Amat_b',i), label = "",
                                                                                                                                       value=1,min=1, max=15, width = '2.5cm'))))}),
-                                                                   
+
                                                                    radioButtons("addDif",label="Do you want to add minimum differences between means?",
                                                                                 choices=list("Yes, minimum values"=1, "Yes, minimum effect sizes"=2,"No"=0),selected=0),
                                                                    conditionalPanel("input.addDif != 0",p("Provide the minimum difference for each constraint below."),
                                                                                     lapply(1:10, function(i){
                                                                                       conditionalPanel(paste0('input.nh >=' ,i, '&& input.addDif != 0'),
-                                                                                                       textInput(paste0('difmin',i), label = h5(paste0('Difference ',i)), 
+                                                                                                       textInput(paste0('difmin',i), label = h5(paste0('Difference ',i)),
                                                                                                                  value = "", width = '50%'))}))),
                                                   conditionalPanel("input.typehypothesis == 'exact'",
                                                                    p("Type the exact values to replicate below separated by commas."),
@@ -161,70 +161,86 @@ shinyUI(fluidPage(
                                                   textInput("seed", label = h5("To obtain fixed results, set a seed value other than 0."),value=0),
                                                   p("Note that running the analysis may take a couple of minutes."),
                                                   actionButton("runButton_priorpred", "Run the replication test")),
-                                         
-                                         tabPanel("Sample Size Calculator",
+
+                                         tabPanel("Sample Size & Power Calculator",
                                                   br(),
-                                                  p("Here you can determine the sample size for a new study with sufficient power to reject",
-                                                    "replication when all means are equal."),
+                                                  p("Here you can (1) determine the sample size for a new study with sufficient power to reject",
+                                                    "replication when all means are equal, or (2) calculate the power to reject replication with", 
+                                                    "prespecified group sample sizes."),
                                                   p("Upload or provide descriptives of the original data first in the tab 'Original study' and obtain the posterior distribution."),
-                                                  radioButtons("typehypothesis_N", 
-                                                               label = h5("Type of hypothesis to be replicated"), 
+                                                  radioButtons("SampcalcVSPower",
+                                                               label=h5("Type of Calculator"),
+                                                               choices=list("Sample Size Calculator"=1,"Power Calculator"=2)),
+                                                  radioButtons("typehypothesis_N",
+                                                               label = h5("Type of hypothesis to be replicated"),
                                                                choices = list("Inequality constraint(s)" = "ineq",
                                                                               "Exact mean values" = "exact"),
                                                                selected = character(0)),
                                                   conditionalPanel("input.typehypothesis_N == 'ineq'",
                                                                    sliderInput("nh_N", "Number of constraints:",
                                                                                min = 1, max = 10, value = 1, step = 1),
-                                                                   p("Specify your pairwise contrasts below.", "The data consists of a number of groups, which each have a mean.", 
+                                                                   p("Specify your pairwise contrasts below.", "The data consists of a number of groups, which each have a mean.",
                                                                      "If the mean of group 1 is expected to be larger than that of group 2 based on the original data, your contrast is: 1>2.",
                                                                      "The larger mean of the contrast is to be put on the left, while the smaller mean of the contrast is to put on the right side of the > symbol."),
                                                                    lapply(1:10, function(i){
                                                                      conditionalPanel(paste0('input.nh_N >=' ,i),
                                                                                       bootstrapPage(
-                                                                                        div(style="display:inline-block",numericInput(paste0('Amat_N_a',i), label = h5(paste0('Constraint ',i)), 
+                                                                                        div(style="display:inline-block",numericInput(paste0('Amat_N_a',i), label = h5(paste0('Constraint ',i)),
                                                                                                                                       value=1,min=1, max=15, width = '2.5cm')),
                                                                                         div(style="display:inline-block",p(">")),
                                                                                         div(style="display:inline-block",numericInput(paste0('Amat_N_b',i), label = "",
                                                                                                                                       value=1,min=1, max=15, width = '2.5cm'))))}),
-                                                                   
+
                                                                    radioButtons("addDif_N",label="Do you want to add minimum differences between means?",
                                                                                 choices=list("Yes, absolute differences"=1, "Yes, effect sizes"=2,"No"=0),selected=0),
                                                                    conditionalPanel("input.addDif_N != 0",p("Provide the minimum difference for each constraint below."),
                                                                                     lapply(1:10, function(i){
                                                                                       conditionalPanel(paste0('input.nh_N >=' ,i, '&& input.addDif_N != 0'),
-                                                                                                       textInput(paste0('difmin_N',i), label = h5(paste0('Difference ',i)), 
+                                                                                                       textInput(paste0('difmin_N',i), label = h5(paste0('Difference ',i)),
                                                                                                                  value = "", width = '50%'))}))),
-                                                  
+
                                                   conditionalPanel("input.typehypothesis_N == 'exact'",
                                                                    p("Type the exact values to replicate below separated by commas."),
                                                                    textInput("exactval_N", label = h5("Exact mean values"), value = "", width = '50%')),
+                                                  
+                                                  conditionalPanel("input.SampcalcVSPower == 1",
+                                                                   
                                                   p("Note that running the analysis may take a while. ",
                                                     "A trial run with max two iterations (option below) may give an indication for a good starting n (option below). ",
                                                     "In the right upper corner of the results tab, you see a progress indicator when the calculations are running.",
                                                     "You can limit computation time by providing a better starting value for n, limiting the number of iterations ",
-                                                    "in the Bayesian analysis (Original Data tab), limiting the number of iterations below, or by limiting the maximum total sample size below.", 
+                                                    "in the Bayesian analysis (Original Data tab), limiting the number of iterations below, or by limiting the maximum total sample size below.",
                                                     "Note that fewer iterations in the Bayesian analysis and in sample size calculations may reduce the quality of the calculations."),
+                                                  
                                                   bootstrapPage(
-                                                    div(style="display:inline-block",textInput("Powtarget", label = h5("Target power"), 
+                                                    div(style="display:inline-block",textInput("Powtarget", label = h5("Target power"),
                                                                                                value = ".825", width = '4.5cm')),
-                                                    div(style="display:inline-block",textInput("Powmargin", label = h5("Margin for target power"), 
+                                                    div(style="display:inline-block",textInput("Powmargin", label = h5("Margin for target power"),
                                                                                                value = ".025", width = '4.5cm')),
-                                                    div(style="display:inline-block",textInput("alpha", label = h5("Alpha level"), 
+                                                    div(style="display:inline-block",textInput("alpha", label = h5("Alpha level"),
                                                                                                value = ".05", width = '4.5cm'))),
                                                   br(),
                                                   bootstrapPage(
-                                                    div(style="display:inline-block",textInput("start_n", label = h5("n per group to start calculations with"), 
+                                                    div(style="display:inline-block",textInput("start_n", label = h5("n per group to start calculations with"),
                                                                                                value = "20", width = '4.5cm')),
-                                                    div(style="display:inline-block",textInput("maxit", label = h5("Maximum number of iterations"), 
+                                                    div(style="display:inline-block",textInput("maxit", label = h5("Maximum number of iterations"),
                                                                                                value = "10", width = '4.5cm')),
-                                                    div(style="display:inline-block",textInput("maxN", label = h5("Maximum total sample size"), 
+                                                    div(style="display:inline-block",textInput("maxN", label = h5("Maximum total sample size"),
                                                                                                value = "600", width = '4.5cm'))),
                                                   br(),
-                                                  actionButton("runButton_sampcalc", "Run sample size calculations")
+                                                  actionButton("runButton_sampcalc", "Run sample size calculations")),
+                                                  conditionalPanel("input.SampcalcVSPower == 2",
+                                                                   bootstrapPage(
+                                                                     div(style="display:inline-block",textInput("nF", label = h5("Sample size per group in the new study, comma seperated"),
+                                                                                                                value = "", width = '4.5cm')),
+                                                                     div(style="display:inline-block",textInput("alpha", label = h5("Alpha level"),
+                                                                                                                value = ".05", width = '4.5cm'))),
+                                                                   br(),
+                                                                   actionButton("runButton_powercalc", "Run power calculations"))
                                          )
-                                         
+
                              )),
-                
+
                 mainPanel(width=6,
                           tabsetPanel(id="outputTabset",
                                       tabPanel("Original Data",
@@ -276,24 +292,27 @@ shinyUI(fluidPage(
                                                downloadButton("downloadData", "Download simulated F values"),
                                                downloadButton("downloadPlot", "Download histogram"),
                                                br()),
-                                      tabPanel("Sample Size Output",
+                                      tabPanel("Sample Size & Power Output",
                                                br(),
-                                               textOutput("helptext3"),
+                                               conditionalPanel("input.SampcalcVSPower == 1",textOutput("helptext3")),
+                                               conditionalPanel("input.SampcalcVSPower == 2",textOutput("helptext3power")),
                                                br(),
-                                               verbatimTextOutput("sampcalc"),
-                                               plotOutput("Fpspower"),
+                                               conditionalPanel("input.SampcalcVSPower == 1",verbatimTextOutput("sampcalc")),
+                                               conditionalPanel("input.SampcalcVSPower == 2",verbatimTextOutput("powercalc")),
+                                               conditionalPanel("input.SampcalcVSPower == 1",plotOutput("Fpspower")),
+                                               conditionalPanel("input.SampcalcVSPower == 2",plotOutput("Fpsbasicpower")),
                                                br()
                                       ))
                 )
   ),
   hr(),
-  p("Terms of Usage",   
+  p("Terms of Usage",
     br(), br(),
     "Purpose of the service “utrecht-university.shinyapps.io” is to provide a digital place for trying out, evaluating and/or comparing methods developed by researchers of Utrecht University for the scientific community worldwide. The app and its contents may not be preserved in such a way that it can be cited and/or can be referenced to.",
     br(), br(),
-    "The web application is provided ‘as is’ and ‘as available’ and is without any warranty. Your use of this web application is solely at your own risk.", 
+    "The web application is provided ‘as is’ and ‘as available’ and is without any warranty. Your use of this web application is solely at your own risk.",
     br(), br(),
     "You must ensure that you are lawfully entitled and have full authority to upload  data in the web application. The file data must not contain any  data which can raise issues relating to abuse, confidentiality, privacy,  data protection, licensing, and/or intellectual property. You shall not upload data with any confidential or proprietary information that you desire or are required to keep secret.") ,
   hr()
-  
-))
+
+    ))

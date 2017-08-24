@@ -5,5 +5,6 @@ importFrom("stats", "coefficients", "lm", "median", "model.matrix",
              "model.response", "plot.ts", "quantile", "resid", "rgamma",
              "rnorm", "sd", "var")
 importFrom("quadprog","solve.QP")
+importFrom("utils", "setTxtProgressBar", "txtProgressBar")
 import(shiny)
 

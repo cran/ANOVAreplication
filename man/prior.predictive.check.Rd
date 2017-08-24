@@ -4,17 +4,16 @@
 \description{
 Uses the prior predictive check to test replication for ANOVA models. }
 \usage{
-prior.predictive.check(n,posterior,statistic,obs=TRUE,F_n,repdata=FALSE,
+prior.predictive.check(n,posterior,statistic,obs=TRUE,F_n,
                        Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,seed=0)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
 \item{n}{vector with the sample size per group (i.e., n_{jr}) for new study (i.e., y_r).}
 \item{posterior}{a matrix (e.g., the output of Gibbs.ANOVA) with samples from the posterior based on the original data (i.e., y_o).}
-\item{statistic}{the type of hypothesis to be calculated: "ineq" for inequality constrained means, "dif" for inequality constraints plus minimum differences between means, "exact" for specific values for the means.}
+\item{statistic}{the type of hypothesis to be evaluated: "ineq" for inequality constrained means, "dif" for inequality constraints plus minimum differences between means, "exact" for specific values for the means.}
 \item{obs}{logic; If FALSE, the prior predictive check does not calculate a p-value, because no observed statistic is provided. Used by the sample.size.calculator function.}
 \item{F_n}{The Fbar value for the new data.}
-\item{repdata}{logic; If TRUE, it uses the replication data produced by a previous run of the prior.predictive.check function.}
 \item{Amat}{a p by q matrix, where p is the number of means in the ANOVA model, and q is the number of constraints to be imposed on the model. Each row represents one constraint where the parameter with the lower value according to the constraint receives the value -1, and the parameter with the higher value according to the constraint receives the value 1. Other parameters within the same row obtain the value 0.}
 \item{exact}{a vector of length p, where p is the number of means in the ANOVA model, with the exact values of the constrained hypothesis.}
 \item{difmin}{a vector of length q with the minimum difference per constraint as specified in \code{Amat}.}
@@ -32,7 +31,7 @@ Zondervan-Zwijnenburg, M.A.J., Van de Schoot, R., & Hoijtink, H. (2017). Testing
 \author{
 M. A. J. Zondervan-Zwijnenburg}
 \seealso{
-See also \code{\link{Gibbs.ANOVA}}, \code{\link{Fbar.ineq}}, \code{\link{Fbar.dif}}, and \code{\link{Fbar.exact}}, \code{\link{sample.size.calc}}.
+See also \code{\link{runShiny}}, \code{\link{Gibbs.ANOVA}}, \code{\link{Fbar.ineq}}, \code{\link{Fbar.dif}}, and \code{\link{Fbar.exact}}, \code{\link{sample.size.calc}}, \code{\link{power.calc}}.
 }
 \examples{
 #analysis original data
@@ -48,7 +47,7 @@ r.F.dif.efsz <- Fbar.dif(data_r,Amat,difmin,effectsize=TRUE)
 
 #prior predictive check
 result <- prior.predictive.check(n=n.r,posterior=output_m,F_n=r.F.dif.efsz,statistic="dif",
-effectsize=TRUE,Amat=Amat,difmin=difmin,repdata=FALSE,seed=1)
+effectsize=TRUE,Amat=Amat,difmin=difmin,seed=1)
 
 result$sumFdist #summary of the f(F_y_sim)
 result$ppp      #the prior predictive p-value
@@ -56,4 +55,3 @@ result$ppp      #the prior predictive p-value
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
 \keyword{htest}
-\keyword{nonparametric }% use one of  RShowDoc("KEYWORDS")
