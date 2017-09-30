@@ -60,9 +60,27 @@ prior.predictive.check <- function(n,posterior,statistic,obs=TRUE,F_n,
     ppp <- sum(Fps>=F_n)/it
 
     #make plot
+    #par(mfrow=c(1,1),mar=c(5.1,4.1,4.1,2.1))
+    #hist(Fps,main="",xlab="",freq=TRUE,las=1)
+    #abline(v=F_n,col="red")
+    
+    #make plot 2
     par(mfrow=c(1,1),mar=c(5.1,4.1,4.1,2.1))
-    hist(Fps,main="",xlab="",freq=TRUE,las=1)
-    abline(v=F_n,col="red")
+    Mode <- function(x) {
+      ux <- unique(x)
+      ux[which.max(tabulate(match(x, ux)))]}
+    
+    if(sum(Fps==Mode(Fps))/length(Fps)>=.10){
+      h <- hist(Fps[-which(Fps==Mode(Fps))],ylim=c(0,sum(Fps==Mode(Fps))),xlab=expression(italic(bar(F)[bold(y)][r])),ylab="Frequency",main="",breaks=20)
+      hist(Fps[-which(Fps==Mode(Fps))],ylim=c(0,max(sum(Fps==Mode(Fps)),h$counts[1])),
+           xlim=c(0,max(max(Fps),F_n)),
+           xlab=expression(italic(bar(F)[bold(y)])),ylab="Frequency",main="",breaks=20)
+      segments(x0=Mode(Fps),y0=0,x1=Mode(Fps),y1=sum(Fps==Mode(Fps)),col="black",lwd=5)
+      abline(v=F_n,col="red")
+    }else{
+      hist(Fps,freq=TRUE,breaks=seq(0,max(Fps),length.out=40),xlim=c(0,max(max(Fps),F_n)),
+           xlab=expression(italic(bar(F)[bold(y)])),ylab="Frequency",main="")
+      abline(v=F_n,col="red")}
 
     result <- list("sumFdist"=summary(Fps),"ppp"=round(ppp,4),"F_sim"=Fps)
     return(result)}

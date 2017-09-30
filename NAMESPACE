@@ -1,7 +1,7 @@
 exportPattern("^[[:alpha:]]+")
-importFrom("graphics", "abline", "hist", "par")
+importFrom("graphics", "abline", "hist", "par", "segments")
 importFrom("grDevices", "rgb")
-importFrom("stats", "coefficients", "lm", "median", "model.matrix",
+importFrom("stats", "aggregate","coefficients", "lm", "median", "model.matrix",
              "model.response", "plot.ts", "quantile", "resid", "rgamma",
              "rnorm", "sd", "var")
 importFrom("quadprog","solve.QP")

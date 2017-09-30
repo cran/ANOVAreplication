@@ -12,11 +12,10 @@ Fbar.ineq <- function(data,Amat){
   s2 <- summary(fit.lm)$sigma^2                           #Residual Standard Error squared
   XX <- crossprod(X); Xy <- t(X) %*% Y
   out.h0 <- solve.QP(Dmat = XX, dvec = Xy, Amat = t(Amat))
-  b.constr <- out.h0$solution
-  RSS.h0 <- sum((Y - (X %*% b.constr))^2)
-  RSS.ha <- sum(resid(fit.lm)^2)
+  RSS.h0 <- sum((Y - (X %*% out.h0$solution))^2)
+  RSS.ha <- sum((Y - (X %*% out.h0$unconstrained.solution))^2)
   #hypothesis test Type B
-  Fresult <- (RSS.h0 - RSS.ha)/s2
+  Fresult <- c((RSS.h0 - RSS.ha)/s2)
   return(Fresult)
 }
 
@@ -61,10 +60,10 @@ Fbar.dif <- function(data,Amat, difmin, effectsize=FALSE){
     out.h0 <- solve.QP(Dmat = XX, dvec = Xy, Amat = t(Amat),bvec=difmin)
   }
   #print(out.h0$solution) #print(out.h0$unconstrained.solution)
-  b.constr <- out.h0$solution
-  RSS.h0 <- sum((Y - (X %*% b.constr))^2)
-  RSS.ha <- sum(resid(fit.lm)^2)
+  RSS.h0 <- sum((Y - (X %*% out.h0$solution))^2)
+  RSS.ha <- sum((Y - (X %*% out.h0$unconstrained.solution))^2)
   #hypothesis test Type B
   Fresult <- (RSS.h0 - RSS.ha)/s2
   return(Fresult)
 }
+

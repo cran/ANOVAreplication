@@ -1,4 +1,4 @@
-sample.size.calc <- function(start_n,itmax=10,nmax=600,powtarget=.825,powmargin=.025,posterior,g.m,
+sample.size.calc <- function(start_n,itmax=10,nmax=600,powtarget=.825,powmargin=.025,posterior,g.m,p.sd,
                              statistic,Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,alpha=.05){
   it=0; power.out=0
   Npower.l <- matrix(NA,ncol=2,nrow=itmax)
@@ -34,11 +34,8 @@ sample.size.calc <- function(start_n,itmax=10,nmax=600,powtarget=.825,powmargin=
     rej.value <- quantile(F_sim.H0, 1-alpha)
 
     #alternative distr. = F scores when all group means are equal (value = general mean original)
-    #the SE of posterior/prior means is derived from the original posterior
-    #the SD of the y-data is that of the original posterior
-    posteriormeans.A <- matrix(NA,nrow=lFps,ncol=p)
-    for (i in 1:p){posteriormeans.A[,i] <- rnorm(lFps,mean=g.m,sd=apply(posterior[,1:p],2,sd))}
-    Ha <- prior.predictive.check(n=nF,posterior=cbind(posteriormeans.A,posterior[,p+1]),
+    #the pooled SD of the y-data is that of the original posterior
+    Ha <- prior.predictive.check(n=nF,posterior=cbind(matrix(g.m,nrow=lFps,ncol=p),rep(p.sd,lFps)),
                                  obs=FALSE,statistic=statistic,Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize)
 
     #power, proportion F's more extreme than rej value based on null distribution (F's original)
