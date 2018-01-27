@@ -29,7 +29,7 @@ power.calc(n.r,posterior,g.m,p.sd,statistic,Amat=0L,exact=0L,difmin=0L,effectsiz
 \references{
 Zondervan-Zwijnenburg, M.A.J., Van de Schoot, R., & Hoijtink, H. (2017). Testing ANOVA replication by means of the prior predictive p-value. }
 \author{
-M. A. J. Zondervan-Zwijnenburg}
+M. A. J. Zondervan-Zwijnenburg, H. Hoijtink}
 \seealso{
 See also \code{\link{runShiny}}, \code{\link{Gibbs.ANOVA}}, \code{\link{Fbar.ineq}}, \code{\link{Fbar.dif}}, and \code{\link{Fbar.exact}}, \code{\link{prior.predictive.check}}, \code{\link{sample.size.calc}}.
 }

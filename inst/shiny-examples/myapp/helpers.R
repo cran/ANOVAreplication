@@ -10,6 +10,8 @@ rnorm2 <- function(n,mean,sd) { mean+sd*scale(rnorm(n)) }
 #F-bar functions ####
 library(quadprog)
 
+#F-bar functions ####
+
 #Fbar function, input = data.frame, Amat is a matrix with inequality constraints,
 #each inequality is summarized within a line that has k indices. For example u1 < u2, u3 = rbind(c(-1,1,0),c(-1,0,1)),
 #Fresult contains the resulting Fbar, and the RSS-df
@@ -20,13 +22,13 @@ Fbar.ineq <- function(data,Amat){
   Y <- model.response(mfit)                               #the data stored in Y
   X <- model.matrix(fit.lm)[,,drop = FALSE]               #dummies
   s2 <- summary(fit.lm)$sigma^2                           #Residual Standard Error squared
-  df.error <- summary(fit.lm)$fstatistic[[3]]             #error df
   XX <- crossprod(X); Xy <- t(X) %*% Y
   out.h0 <- solve.QP(Dmat = XX, dvec = Xy, Amat = t(Amat))
-  RSS.h0 <- sum((Y - (X %*% out.h0$solution))^2)
-  RSS.ha <- sum((Y - (X %*% out.h0$unconstrained.solution))^2)
+  b.constr <- out.h0$solution
+  RSS.h0 <- sum((Y - (X %*% b.constr))^2)
+  RSS.ha <- sum(resid(fit.lm)^2)
   #hypothesis test Type B
-  Fresult <<- (RSS.h0 - RSS.ha)/s2
+  Fresult <- (RSS.h0 - RSS.ha)/s2
   return(Fresult)
 }
 
@@ -42,9 +44,9 @@ Fbar.exact <- function(data,exact){
   s2 <- summary(fit.lm)$sigma^2                           #Residual Standard Error squared
   df.error <- summary(fit.lm)$fstatistic[[3]]             #error df
   RSS.h0 <- sum((Y - (X %*% exact))^2)
-  RSS.ha <- sum((Y - (X %*% fit.lm$coefficients))^2)
+  RSS.ha <- sum(resid(fit.lm)^2)
   #hypothesis test Type B
-  Fresult <<- (RSS.h0 - RSS.ha)/s2
+  Fresult <- (RSS.h0 - RSS.ha)/s2
   return(Fresult)
 }
 
@@ -71,10 +73,11 @@ Fbar.dif <- function(data,Amat, difmin, effectsize=FALSE){
     out.h0 <- solve.QP(Dmat = XX, dvec = Xy, Amat = t(Amat),bvec=difmin)
   }
   #print(out.h0$solution) #print(out.h0$unconstrained.solution)
-  RSS.h0 <- sum((Y - (X %*% out.h0$solution))^2)
-  RSS.ha <- sum((Y - (X %*% out.h0$unconstrained.solution))^2)
+  b.constr <- out.h0$solution
+  RSS.h0 <- sum((Y - (X %*% b.constr))^2)
+  RSS.ha <- sum(resid(fit.lm)^2)
   #hypothesis test Type B
-  Fresult <<- (RSS.h0 - RSS.ha)/s2
+  Fresult <- (RSS.h0 - RSS.ha)/s2
   return(Fresult)
 }
 
@@ -162,7 +165,14 @@ prior.predictive.check <- function(n,posterior,statistic,obs=TRUE,F_obs,
 }
 
 #power ####
-power.ppp <- function(start_n,powtarget=.825,powmargin=.025,posterior,g.m,statistic,
+pooled.sd <- function(data){
+  p <- length(table(data$g))
+  n.g <- table(data$g)
+  sd.g <- aggregate(data$y,by=list(data$g),sd)[,2]
+  sqrt(sum((n.g - 1) * sd.g^2)/(sum(n.g) - p))
+}
+
+power.ppp <- function(start_n,powtarget=.825,powmargin=.025,posterior,g.m,p.sd,statistic,
                       Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,
                       nmax=600,alpha=.05,itmax=10){
   it=0; power.out=0
@@ -201,11 +211,8 @@ power.ppp <- function(start_n,powtarget=.825,powmargin=.025,posterior,g.m,statis
     rej.value <<- quantile(Fps.power.H0, 1-alpha)
 
     #alternative distr. = F scores when all group means are equal (value = general mean original)
-    #the SE of posterior/prior means is derived from the original posterior
     #the SD of the y-data is that of the original posterior
-    posteriormeans.A <- matrix(NA,nrow=lFps,ncol=p)
-    for (i in 1:p){posteriormeans.A[,i] <- rnorm(lFps,mean=g.m,sd=apply(posterior[,1:p],2,sd))}
-    prior.predictive.check(n=nF,posterior=cbind(posteriormeans.A,posterior[,p+1]),
+    prior.predictive.check(n=nF,posterior=cbind(matrix(g.m,nrow=lFps,ncol=p),rep(p.sd,lFps)),
                            obs=FALSE,statistic=statistic,Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize)
 
     #power, proportion F's more extreme than rej value based on null distribution (F's original)
@@ -254,29 +261,28 @@ power.ppp <- function(start_n,powtarget=.825,powmargin=.025,posterior,g.m,statis
   return(return.info)}
 
 #function to calculate power post-hoc with Ha: mu1 = mu.. = muJ
-power.basic <- function(nF,posterior,g.m,statistic,Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,alpha=.05,breaksize=round(rej.value,2)){
+power.basic <- function(nF,posterior,g.m,p.sd,statistic,Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,alpha=.05,breaksize=round(rej.value,2)){
   p <- ncol(posterior)-1    #number of groups
   lFps <- dim(posterior)[1] #length future Fps
-  
+
   #null distribution = F scores for original dataset
   prior.predictive.check(n=nF,posterior=posterior,obs=FALSE,
                          statistic=statistic,Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize)
   #rejection value is max 5% of H0
   Fps.power.H0 <- Fps
   rej.value <- quantile(Fps.power.H0, 1-alpha)
-  
+
   #alternative distr. = F scores when all group means are equal (value = general mean original)
-  #the SE of posterior/prior means is derived from the original posterior
   #the SD of the y-data is that of the original posterior
-  posteriormeans.A <- matrix(NA,nrow=lFps,ncol=p)
-  for (i in 1:p){posteriormeans.A[,i] <- rnorm(lFps,mean=g.m,sd=apply(posterior[,1:p],2,sd))}
-  prior.predictive.check(n=nF,posterior=cbind(posteriormeans.A,posterior[,p+1]),
-                         obs=FALSE,statistic=statistic,Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize)
+  power.H1 <- prior.predictive.check(n=nF,posterior=cbind(matrix(g.m,nrow=lFps,ncol=p),rep(p.sd,lFps)),
+                                     obs=FALSE,statistic=statistic,Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize)
+
+  #power, proportion F's more extreme than rej value based on null distribution (F's original)
   Fps.power.H1 <- Fps
-  
+
   #power, proportion F's more extreme than rej value based on null distribution (F's original)
   power.out <- sum(Fps.power.H1>rej.value)/length(Fps.power.H1)
-  
+
   Fps.power.H0 <<- Fps.power.H0
   Fps.power.H1 <<- Fps.power.H1
   rej.value <<- rej.value

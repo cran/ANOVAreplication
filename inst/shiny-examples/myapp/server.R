@@ -506,7 +506,7 @@ shinyServer(function(input, output, session) {
 
       outputsampcalc <<- power.ppp(start_n=as.numeric(input$start_n),itmax=as.numeric(input$maxit),
                                    powtarget=as.numeric(input$Powtarget),powmargin=as.numeric(input$Powmargin),
-                                   posterior=output_G,g.m=mean(data_o.work$y),
+                                   posterior=output_G,g.m=mean(data_o.work$y),p.sd=pooled.sd(data_o.work),
                                    statistic=statistic,
                                    Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
                                    nmax=as.numeric(input$maxN),alpha=as.numeric(input$alpha))
@@ -545,34 +545,34 @@ shinyServer(function(input, output, session) {
       "The vertical line indicates the critical value located at 1-alpha'th percentile of the null distribution. ",
       "The proportion of the alternative distribution at the right side of the critical value constitutes statical power. ")
   })
-  
+
   #power calculator ####
   results.basicpower <- reactive({
     if (input$runButton_powercalc == 0){return()}
     validate(need(output_Gibbs(),message="Obtain the posterior distribution in the Original Study tab first."))
-    
+
     isolate({
       if (input$typepriorinput == 1){data_o.work <- data_o()}
       if (input$typepriorinput == 2){data_o.work <- data_descr()}
-      
+
       n.r <- as.numeric(unlist(strsplit(input$nF,",")))
-      
+
       if (input$typehypothesis_N == "ineq"){
         Amat_1a <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_a', i)]])
         Amat_2a <- lapply(1:input$nh_N,function(i) unlist(Amat_1a[[i]]))
         Amat_3a <- do.call(c,Amat_2a)
-        
+
         Amat_1b <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_b', i)]])
         Amat_2b <- lapply(1:input$nh_N,function(i) unlist(Amat_1b[[i]]))
         Amat_3b <- do.call(c,Amat_2b)
-        
+
         Amat_N <- matrix(0,nrow = input$nh_N,ncol=data_o.gibbs$p)
         for(i in 1:input$nh_N){
           Amat_N[i,Amat_3a[i]] <- 1
           Amat_N[i,Amat_3b[i]] <- -1}
-        
+
         exact_N=0L;
-        
+
         if (input$addDif_N==0){difmin_N=0L; effectsize_N = FALSE; statistic="ineq"}
         if (input$addDif_N==1){ #absolute differences
           difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
@@ -589,36 +589,36 @@ shinyServer(function(input, output, session) {
       if (input$typehypothesis_N == "exact"){
         Amat_N = 0L; difmin_N=0L; statistic="exact"; effectsize_N = FALSE
         exact_N = as.numeric(unlist(strsplit(input$exactval_N,",")))}
-      
+
       output_G <- output_Gibbs()
       #nsample= dim(output_G)[1]
       #sample.r <- sample(1:dim(output_G)[1],nsample)
-      
-      outputpowercalc <<- power.basic(nF=n.r,posterior=output_G,g.m=mean(data_o.work$y),
+
+      outputpowercalc <<- power.basic(nF=n.r,posterior=output_G,g.m=mean(data_o.work$y),p.sd=pooled.sd(data_o.work),
                                    statistic=statistic,Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
                                    alpha=as.numeric(input$alpha))
-      
+
     })
   })
-  
+
   observe({
     # Change the selected tab.
     if (input$runButton_powercalc == 1) {
       updateTabsetPanel(session, "outputTabset", selected = "Sample Size & Power Output")}
   })
-  
+
   output$powercalc <- renderPrint({
     if (is.null(results.basicpower())){return(invisible())}
     outputpowercalc
   })
-  
+
   output$Fpsbasicpower<- renderPlot({
     if (is.null(results.basicpower())){return()}
     hist(Fps.power.H0,freq=FALSE,col=rgb(1,0,0,1/4),border=rgb(1,0,0,1/2),main="",xlab=expression(italic(bar(F)[bold(y)]))) #null with true effect
     hist(Fps.power.H1,freq=FALSE,col=rgb(0,0,1,1/4),border=rgb(0,0,1,1/2),add=TRUE) #H1, means equal
     abline(v=rej.value,col=rgb(1,0,1,1/2),lwd=2)
   })
-  
+
   output$helptext3power <- renderText({
     if (is.null(results.basicpower())){return()}
     paste(
