@@ -32,10 +32,10 @@ See also \code{\link{runShiny}}, \code{\link{Fbar.dif}}, and \code{\link{Fbar.ex
 data <- data.frame(y=ChickWeight$weight,g=ChickWeight$Diet)
 aggregate(data$y,by=list(data$g),mean)
 
-#make Amat with constraints: 1<4,2<4,3<4 (last constraint is not true)
-Amat <- (rbind(c(-1,0,0,1),c(0,-1,0,1),c(0,0,-1,1)))
-
-Fbar.ineq(data,Amat)
+#create matrices HR: g4>(g1,g2,g3)
+HR <- create_matrices(varnames = c("g1","g2","g3","g4"),
+                      hyp = "g4>(g1,g2,g3)")
+Fbar.ineq(data,Amat=HR$Amat)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

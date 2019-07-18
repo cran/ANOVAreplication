@@ -7,7 +7,7 @@ Samples from the posterior distribution of the data by means of a Gibbs sampler 
 Gibbs.ANOVA(data,it=5000,burnin=500,seed=0)
 }
 \arguments{
-\item{data}{a data frame with a variable y and a variable g, where y is the dependent variable, and g is the grouping variable for the ANOVA.}
+\item{data}{a data frame with a variable y and a variable g, where y is the dependent variable, and g is the grouping variable for the ANOVA. Groups are labeled consecutively, starting at 1.}
 \item{it}{the number of (post-burnin) iterations for each of the two chains. The default uses 5.000 iterations.}
 \item{burnin}{the number of iterations for the function to use for the burnin phase in each of the two chains. The default uses 500 burnin iterations.}
 \item{seed}{integer; seed value. If seed==0, no seed is set.}

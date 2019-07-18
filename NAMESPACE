@@ -1,10 +1,20 @@
-exportPattern("^[[:alpha:]]+")
+export(Gibbs.ANOVA)
+export(create_matrices)
+export(Fbar.ineq)
+export(Fbar.exact)
+export(Fbar.dif)
+export(prior.predictive.check)
+export(power.calc)
+export(sample.size.calc)
+export(generate.data)
+export(pooled.sd)
+export(runShiny)
 importFrom("graphics", "abline", "hist", "par", "segments")
 importFrom("grDevices", "rgb")
 importFrom("stats", "aggregate","coefficients", "lm", "median", "model.matrix",
              "model.response", "plot.ts", "quantile", "resid", "rgamma",
              "rnorm", "sd", "var")
 importFrom("quadprog","solve.QP")
-importFrom("utils", "setTxtProgressBar", "txtProgressBar")
+importFrom("utils", "setTxtProgressBar", "txtProgressBar", "tail")
 import(shiny)
 

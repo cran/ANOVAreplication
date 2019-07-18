@@ -8,7 +8,7 @@ pooled.sd(data)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{data}{A dataframe with two variables: y for the dependent variable and g for the grouping variable. }
+  \item{data}{A dataframe with two variables: the dependent variable in the first column, and the grouping variable in the second column. }
 }
 \value{
 Returns the pooled standard deviation.

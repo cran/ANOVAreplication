@@ -1,0 +1,295 @@
+---
+title: "Testing replication in ANOVA models with the ANOVAreplication package"
+author: "M.A.J. Zondervan-Zwijnenburg"
+bibliography: Library_Marielle.bib
+output: rmarkdown::html_document
+self_contained: yes
+fontsize: 11pt
+vignette: >
+  %\VignetteIndexEntry{How to use the ANOVAreplication R-package}
+  %\VignetteEngine{knitr::rmarkdown_notangle}
+---
+
+  
+## Introduction
+  In this vignette, we explain how replication of an ANOVA can be tested with the prior predictive $p$-value through the *ANOVAreplication* R-package [@Zondervan_replicationpackage]. More detailed information on the prior predictive $p$-value [@Box_1980] in the context of replication can be found in @Zondervan_ANOVA. 
+  
+  We present the general workflow to use the prior predictive $p$-value and illustrate it with examples from the Reproducibility Project Psychology [@OSC_2012], but let us first load the *ANOVAreplication* package.
+  
+  ```{r library, echo=TRUE, message=FALSE, warning=FALSE}
+library(ANOVAreplication)
+```
+
+## Workflow
+The workflow to calculate and interpret the prior predictive $p$-value is depicted in the figure below. All steps in this workflow can be taken with the *ANOVAreplication* functions, or through the interactive environment that can be launched by running `runShiny()` in the R-console. The interactive application is also available [online](https://osf.io/6h8x3/). 
+
+```{r workflow, echo=FALSE, out.width='100%',fig.align='center',fig.cap="Workflow."}
+
+knitr::include_graphics("Workflow2.pdf", dpi = NA)
+
+```
+
+For the first three steps (1a-1c) of the prior predictive $p$-value workflow, the only thing that is needed is the original study. 
+
+* Step 1a is to derive the relevant feature to be evaluated in the test statistic from the findings of the original study. We will elaborate on this topic in the Relevant Features section of this vignette. 
+* Step 1b is defining the population for which replication should be rejected (i.e., $H_a$). What is the ordering of the means in this population and what is the effect size in that ordering? $H_a$ can be a population in which all means are equal (this is also the default in the `runShiny` function), but it does not have to be.
+* Step 1c is obtaining the data of the original study, or reconstruct the data based on reported means, standard deviations and group sample sizes. 
+
+If the new study is not yet conducted, Step 2 is calculating the required sample size per group for the new study to reject replication with sufficient power in case $H_a$ is true, where power is denoted by $\gamma$ in the figure above. The sample sizes calculation can be conducted with the `sample.size.calc` function in the *ANOVAreplication* package. It can occur that the function indicates that the target power level was not reached for a set maximum sample size. For some combinations of original study effect sizes, original study sample sizes, $H_\text{RF}$ and $H_a$, the power is limited, and there is no new study sample size that will result in sufficient statistical power. This means that the Type II error probability (1-$\gamma$) is higher than requested. The researcher should reconsider of conducting the new study is justifiable. We advise to test replication mainly for original studies with at least a medium effect size and preferably group sample sizes $\geq 50$. 
+
+Step 3 is computing the prior predictive $p$-value (with `prior.predictive.check`) and the power associated to the sample size of the new study (with `power.calc`). Note that it is not a post-hoc power analysis, as the definition of $H_a$ is unrelated to the new study. Hence, the power to reject replication for $H_a$ can be insufficient (i.e., larger than 1- the preset Type II error rate $\beta$), while the prior predictive $p$-value is statistically significant, or vice versa. 
+
+The workflow figure above assists in interpreting the resulting $p$-value, considering the statistical power to reject replication for $H_a$, unless the prior predictive $p$-value is 1.00. If the new study perfectly meets the features described in $H_\text{RF}$, the prior predictive $p$-value will be 1.00. In such a case, we confirm replication of the relevant features in the original study as captured in $H_\text{RF}$, irrespective of power. 
+
+In case of a non-significant result in combination with low power, the researcher should emphasize the probability that not rejecting replication is a Type II error, and it is advised to conduct a replication study with larger $n_{jr}$. The required sample size per group can again be calculated with the `sample.size.calc` function. 
+If the required $n_{jr}$ is excessive given $H_a$, it may be an inevitable conclusion that the original study is not suited for replication testing by means of the prior predictive $p$-value. If replication is rejected despite low power, it implies that the observed new dataset deviates more from $H_R$ than most datasets simulated under $H_a$. With sufficient statistical power, it is still informative to notify the reader of the achieved power and/or the probability of a Type II error. 
+
+## Relevant Features
+To obtain a test-statistic $\bar F$ in each dataset, we evaluate a Relevant Feature Hypothesis $H_\text{RF}$ that captures the findings of the original study. 
+
+The constraints in $H_\text{RF}$ should be based on the findings of the original study, which implies that $H_\text{RF}$ is always in agreement with the results of the original study. The results alone, however, are usually not enough to determine which $H_\text{RF}$ is to be evaluated. 
+For example,  an original study shows that $\bar{y}_{1o} < \bar{y}_{2o} < \bar{y}_{3o}$. This finding may lead to $H_\text{RF}$: $\mu_{1d}< \mu_{2d} < \mu_{3d}$, but also to $H_\text{RF}$: $(\mu_{1d},\mu_{2d})$< $\mu_{3d}$ or $H_\text{RF}$: $\mu_{1d}$< $(\mu_{2d} ,\mu_{3d})$. 
+Which exact features should be covered in $H_\text{RF}$, can be guided by the conclusions of the original study. For example, if in the original study it is concluded that a treatment condition leads to better outcomes than two control conditions, the most logical specification of the relevant features is $H_\text{RF}$: $(\mu_{\text{controlA}d},\mu_{\text{controlB}d})$< $\mu_{\text{Treatment}d}$. Alternatively, if in the original study it is concluded that treatment A is better than treatment B, which is better than the control condition, a logical relevant feature hypothesis would be: $H_\text{RF}$: $\mu_{\text{TreatmentA}d}> \mu_{\text{TreatmentB}d} > \mu_{\text{Control}d}$. It may also occur that the researcher conducting the replication test has an interest to evaluate a claim that is not in the original study, but could be made based on its results. In all cases, the researcher conducting the replication test should substantiate the choices made in the formulation of $H_\text{RF}$ with results from the original study. 
+It is good practice to also pre-register $H_\text{RF}$. 
+
+We can use the function `create_matrices` to transform $H_\text{RF}$ into matrices that can be used by the R-package as follows:
+```{r hypineq1, echo=TRUE}
+#mu1<mu3 & mu2 <mu3
+create_matrices(varnames=c("g1","g2","g3"),hyp="g1<g3 & g2<g3")
+```
+Or equivalently: 
+```{r hypineq2, echo=TRUE, message=FALSE, warning=FALSE}
+#also #mu1<mu3 & mu2 <mu3
+create_matrices(varnames=c("g1","g2","g3"),hyp="(g1,g2)<g3")
+```
+These matrices can be used to calculate $\bar F$ with `Fbar.dif`. 
+```{r fbardif, echo=TRUE, eval=FALSE}
+HR <- create_matrices(varnames=c("g1","g2","g3"),hyp="(g1,g2)<g3")
+Fbar.dif(data.r,Amat=HR$Amat,difmin=HR$difmin,effectsize=FALSE)
+```
+
+Alternatively, it may be of interest to test if the effect sizes found in the original study can be replicated. Effect sizes can be quantified using Cohen's $d$ for the difference between two groups. 
+<!-- Using this implies that for one or more pairs $j$, $j'$: Cohen's $d_{jj'r} = \frac{\mu_{jr} - \mu_{j'r}}{s_{jj'r}} \geq x$, where $s_{jj'r} = \frac{(n_{jr}-1)s^2_{jr}+(n_{j'r}-1)s^2_{j'r}}{n_{jr}+n_{j'r}-2}$. Furthermore, $x$ denotes the minimum effect size.  -->
+Given that we are testing more qualitative conclusions of the original study, it can be interesting to use the threshold for an effect size category as a minimum in $H_\text{RF}$. That is: .00 for negligable, .20 for small, .50 for medium, and .80 for large effect sizes. 
+For example, the original study may demonstrate that $\hat d_{12o} = .67$, and $\hat d_{23o} = .34$, where $\hat d_{jj'o}$ denotes an estimate of Cohen's $d$ based on the observed data. 
+Researchers may consider this result replicated if $H_{R}$: $d_{12r} \geq .5$ \& $d_{23r} \geq .2$ is supported by the new data. Better even, would be to use a minimally relevant effect size. 
+Including a minimum value or difference in a hypothesis is in line with \citeA{Simonsohn_2015}, who highlights the relevance of detectability of an effect with the example of levitation. If the original study documents 9 inch of levitation in an experimental group, researchers may be more interested in rejecting the qualitative claim that levitation is an existing and detectable phenomenon, that is testing, for example, $H_{R}: d_{\text{control,experimental,}r} > 0.2$, than in assessing whether a levitation of 7 inch as found in a new study is significantly different from the 9 inch in the original study, that is, testing $H_{R}$: $\mu_{\text{experimental,}r}=9.00$.
+```{r hypeff, echo=TRUE}
+#d12>.5, d23>.2
+create_matrices(varnames=c("g1","g2","g3"), hyp="g2-g1>.5&g3-g2>.2")
+
+#g4>(g1,g2,g3). g4-g1>0.8, g4-g2>0.5, g4-g3>0.2
+create_matrices(varnames = c("g1","g2","g3","g4"),
+                hyp = "g4-g1>0.8 & g4-g2>0.5 & g4-g3>0.2")
+```
+These matrices can be used to evaluate effect size differences with `Fbar.dif` as follows:
+```{r fbareff, echo=TRUE, eval=FALSE}
+HR <- create_matrices(varnames=c("g1","g2","g3"),hyp="g2-g1>.5&g3-g2>.2")
+Fbar.dif(data.r,Amat=HR$Amat,difmin=HR$difmin,effectsize=TRUE)
+```
+
+Finally, in some cases it may be of interest whether the means as found in the original study are replicated in the new study. This implies that $\mu_{1r} = \bar{y}_{1o}, ..., \mu_{Jr} = \bar{y}_{Jo}$. For example, if $\bar{y}_{1o} = 1, \bar{y}_{2o} = 2, \bar{y}_{3o} =3$ is observed, the corresponding hypothesis for the new study is $H_{R}$: $\mu_{1r} = 1, \mu_{2r} = 2, \mu_{3r} =3$. 
+
+To calculate $\bar F$ for such an exact hypothesis, the `Fbar.exact` function can be used as follows:
+```{r fbarexact, echo=TRUE, eval=FALSE}
+means <- aggregate(data$y,by=list(data$g),mean)[,2]
+Fbar.dif(data.r,exact=means)
+```
+Note that the fact that the new study will not find these exact means, will not necessarily mean that replication will be rejected. On the contrary. Such as specific $H_\text{RF}$ is also never true for the predicted data. The prior predictive $p$-value will indicate if the deviance from $H_\text{RF}$ in the new study is extreme (i.e., significant) compared to deviance in the predicted data. 
+
+Again, which exact features should be covered in $H_\text{RF}$ is to be decided based on the results of the original study. The researcher conducting the replication test should substantiate the choices made in the formulation of $H_\text{RF}$ with results from the original study. 
+It is good practice to also pre-register $H_\text{RF}$. 
+
+## Example 1: Simple Ordering of Means
+The first study is @Fischer_2008, who studied the impact of self-regulation resources on confirmatory information processing. 
+
+According to the theory, people who have low self-regulation resources (i.e., depleted participants) will prefer information that matches their initial standpoint. An ego-threat condition was added, because the literature proposes that ego-threat affects decision relevant information processing, although the direction of this effect is not clear. 
+To determine which relevant feature of the results should be tested for replication, we follow the original findings: 
+
+> Planned contrasts revealed that the confirmatory information processing tendencies of participants with reduced self-regulation resources [...] were stronger than those of nondepleted [...] and ego threatened participants [...].
+
+This translates to: $H_\text{RF}$: $\mu_{\text{low self-regulation},r}>$ $(\mu_{\text{high self-regulation},r},\mu_{\text{ego-threatened},r})$ (Workflow Step 1a). 
+
+We want to reject replication when all means in the population are equal. That is: $H_{a}$: $\mu_{\text{low self-regulation},r}=$ $(\mu_{\text{high self-regulation},r}=$$\mu_{\text{ego-threatened},r})$ (Workflow Step 1b). 
+
+We simulate the original data based on the means, standard deviations and sample sizes reported in  @Fischer_2008 (Workflow Step 1c).
+
+```{r datao1, echo=TRUE,eval=TRUE}
+means = c(0.36,-0.19,-0.18)
+sds = c(1.08,0.53,0.81)
+n = c(28,28,28) #N = 84
+y <- list(NA)
+for (i in 1:3){y[[i]] <- generate.data(n[i],means[i],sds[i])}
+y <- unlist(y)
+group <- c(rep(0,n[1]),rep(1,n[2]),rep(2,n[3]))
+p <- length(unique(group))
+data=data.frame(y=y,g=group)
+aggregate(data$y,by=list(data$g),mean)
+dataFischer <- data
+```
+
+As the replication study is already conducted by @Galliani_2015, we do not calculate the required sample size to test replication (Workflow Step 2). Instead, we load or generate the new data (here the data is generated, to simplify the vignette).
+
+```{r datar1, echo=TRUE,eval=TRUE, message=FALSE, warning=FALSE}
+means = c(-0.07485080,-0.04550836,0.12737181)
+sds = c(0.4498046,0.4655386,0.6437770)
+n.r = c(48,47,45) 
+y <- list(NA)
+for (i in 1:3){y[[i]] <- generate.data(n.r[i],means[i],sds[i])}
+y <- unlist(y)
+group <- c(rep(0,n.r[1]),rep(1,n.r[2]),rep(2,n.r[3]))
+p <- length(unique(group))
+data=data.frame(y=y,g=group)
+aggregate(data$y,by=list(data$g),mean)
+dataGalliani <- data
+```
+
+Now, we can proceed to calculate the prior predictive $p$-value and the power of the replication test (Workflow Step 3). To obtain the prior predictive $p$-value and calculate its power, we first need to obtain the posterior of the original study with the `Gibbs.ANOVA` function. 
+```{r Gibbs1, echo=TRUE, eval=TRUE, cache=FALSE}
+post <- Gibbs.ANOVA(dataFischer,it=1000,burnin=1000,seed=2019)
+```
+This posterior is our prior expectation for future data. 
+
+We transform the hypothesis into matrices with the function `create_matrices`. Subsequently, we can use the `Fbar.dif` function to evaluate inequality constraints with or without minimum differences added in the new study. If we would have a $H_\text{RF}$ concerning exact values, we would have used the `Fbar.exact` function. The function `prior.predictive.check` calculates the actual prior predictive $p$-value, using:
+1. the sample size of the new study
+2. the posterior of the original study
+3. the type of statistic that is the be evaluated: "dif" for group orderings and minimum differences, "exact" for replication of exact values. 
+4. $\bar F$ for the new study
+5. The \texttt{Amat} matrix and \texttt{difmin} vector following from `create.matrices` for $H_R$ + the effectsize logical indicator (default = FALSE). 
+```{r ppp1, results=FALSE, cache=FALSE, echo=TRUE, fig.keep='last'}
+Amat <- create_matrices(c("lsr","hsr","ego"),"lsr>(hsr,ego)")$Amat
+difmin <- create_matrices(c("lsr","hsr","ego"),"lsr>(hsr,ego)")$difmin
+F_n.Galliani <- Fbar.dif(data=dataGalliani,Amat=Amat,difmin=difmin,effectsize=FALSE)
+ppp.FG <- prior.predictive.check(n=n.r,posterior=post$posterior,
+                                 statistic="dif",F_n=F_n.Galliani,Amat=Amat,difmin=difmin,
+                                 effectsize=FALSE)
+```
+
+The resulting prior predictive $p$-value is:
+```{r pppres, echo=TRUE}
+ppp.FG$ppp
+```
+
+The power is calculated with the `power.calc`. This function is provided with the following information:
+1. the sample size of the new study
+2. the posterior of the original study
+3. the mean(s) for the alternative population for which replication should be rejected
+4. the standard deviation for the alternative population for which replication should be rejected
+5. the type of statistic that is the be evaluated: "dif" for group orderings and minimum differences, "exact" for replication of exact values. 
+6. The \texttt{Amat} matrix and \texttt{difmin} vector following from `create.matrices` for $H_R$ + the effectsize logical indicator (default = FALSE).
+```{r powerppp1, results=FALSE, cache=FALSE, echo=TRUE}
+pow.G <- power.calc(n.r=n.r,posterior=post$posterior,g.m=rep(mean(dataGalliani$y),3),p.sd=pooled.sd(dataGalliani),
+                    statistic="dif",Amat=Amat,difmin=difmin,effectsize=FALSE)
+```
+
+The resulting power is:
+```{r ppppowerres, echo=TRUE}
+pow.G$power
+```
+
+The resulting prior predictive $p$-value thus was `r ppp.FG$ppp` with $\gamma =$ `r round(pow.G$power,2)`, indicating that we reject replication, despite limited power. The ordering in the new data by @Galliani_2015 results in an extreme $\bar F$ score compared to the predicted data. The figure resulting from the prior predictive check illustrates this conclusion: The thick line represents the $\bar F$ for the predicted data scores that are exactly 0. Here, over 90\% of the predicted data scores perfectly in line with $H_{R}$. The new study by @Galliani_2015, however, deviates from $H_R$ and scores in the extreme `r round(ppp.FG$ppp*100,1)`\% of the predicted data. The replication of the original study conclusions is thus rejected. 
+
+## Example 2: Interaction Effect
+As a second example, we evaluate an interaction effect. 
+@Janiszewski_2008 draw the conclusion that there is an interaction effect of adjustment motivation and anchor rounding: 
+
+>The difference in the amount of adjustment between the rounded- and precise-anchor conditions increased as the motivation to adjust went from low [...] to high'' (p. 125). 
+
+The results and conclusions of Janiszewski and Uy with respect to experiment 4a translate to $H_\text{RF}$: $(\mu_{\text{low motivation,round},r}>\mu_{\text{low motivation,precise},r})$ $\&$ $(\mu_{\text{high motivation,round},r} > \mu_{\text{high motivation,precise},r})$ $\&$ $(\mu_{\text{low motivation,round},r}-\mu_{\text{low motivation,precise},r}) <$ $(\mu_{\text{high motivation,round},r} - \mu_{\text{high motivation,precise},r})$. 
+
+We can evaluate the replication of @Janiszewski_2008 as follows:
+```{r ex2, eval=FALSE}
+#Janiszewski (o), Chandler (r) ####
+n = c(14,15,15,15)
+means = c(-0.76,-0.23,-0.04,0.98)
+sds = c(0.17,0.48,0.28,0.41)#*sqrt(n)
+y <- list(NA)
+for (i in 1:4){y[[i]] <- generate.data(n[i],means[i],sds[i])}
+y <- unlist(y)
+group <- c(rep(0,n[1]),rep(1,n[2]),rep(2,n[3]),rep(3,n[4]))
+p <- length(unique(group))
+data=data.frame(y=y,g=group)
+aggregate(data$y,by=list(data$g),mean)
+dataJaniszewski <- data
+
+#put file in working directory
+dataChandler <- read.csv("Ex1r Chandler_r.csv")
+n <- table(dataChandler$g)
+
+post <- Gibbs.ANOVA(dataJaniszewski,it=5000,burnin=1000,seed=2019)
+
+#lp = low motivation + precise, lr = low motivation + rounded
+#hp = high motivation + precise, high = low motivation + rounded 
+#4a HR lr>lp & hr>hp & (lr-lp)<(hr-hp)
+Amat <- create_matrices(varnames=c("lp","lr","hp","hr"),"lr>lp & hr>hp & (lr-lp)<(hr-hp)")$Amat
+difmin <- create_matrices(varnames=c("lp","lr","hp","hr"),"lr>lp & hr>hp & (lr-lp)<(hr-hp)")$difmin
+F_n.Chandler <- Fbar.ineq(data=dataChandler,Amat=Amat)
+ppp.JC <- prior.predictive.check(n=n,posterior=post$posterior,
+                                 statistic="dif", F_n=F_n.Chandler, Amat=Amat,difmin=difmin,seed=2019)
+pow.J <- power.calc(n,posterior=post$posterior,g.m=mean(dataJaniszewski$y),p.sd=pooled.sd(dataJaniszewski),
+                    statistic="ineq",Amat=Amat,difmin=difmin)
+```
+
+The prior predictive $p$-value related to this $H_\text{RF}$ is .014 with $\gamma=.87$. Thus, we reject replication of the interaction effect. 
+
+## Example 3: Effect Sizes
+The third and final study is @Monin_2008, who studied the rejection of `moral rebels'. 
+The theory is that people who obey the status quo dislike rebels (as opposed to obedient others), because their own behavior is implicitly questioned by them. People who have been secured in their moral and adaptive adequacy by means of a self-affirmation task, however, should feel less need to reject rebels, and should feel able to recognize the value of the rebels' stand. 
+
+With respect to the experiment that was subject to replication, @Monin_2008 confirm the following hypotheses: 
+
+>Prediction 1a: Rejection by actors. Actors should like rebels less than they like obedient others. 
+
+and 
+
+>Prediction 3a: Self-affirmation opens the heart. Self-affirmed actors should not feel a need to reject rebels as much as individuals less secure in their sense of self-worth, even if they still believe that rebels would dislike them.
+
+@Monin_2008 indeed observed for the dependent variable attraction: $\bar{y}_{\text{rebel},o} <  (\bar{y}_{\text{rebel-affirmed},o},  \bar{y}_{\text{obedient},o})$. 
+Furthermore, @Monin_2008 report that Cohen's $d_{\text{obedient,rebel},o}$ was .93 in this specific experiment, and that it was on average .86 over the four experiments that were part of the study. By Cohen's effect size thresholds\footnote{Note that a minimally relevant effect size is preferred over the thresholds instated by Cohen}, we could say that we replicate this study if we find that $d_{\text{obedient,rebel},r}$ is large. Since $\bar{y}_{\text{rebel},o} <  \bar{y}_{\text{rebel-affirmed},o}$, $d_{\text{rebel-affirmed,rebel},r}$ should at least be positive. Consequently, with respect to a new study, we would want to test 
+$H_\text{RF}$: $d_{\text{obedient,rebel},r}>.80,$ $d_{\text{rebel-affirmed,rebel},r}> 0$ (Workflow Step 1a). Again, we want to reject replication for a population with equal means (Step 1b) and we reconstruct the original data based on the reported means, standard deviations and sample sizes (Step 1c). 
+As the new study has already be conducted, we do not use the sample size calculator (Workflow Step 2) and proceed to calculate the prior predictive $p$-value and the associated power (Workflow Step 3). 
+Below follows the code to conduct the replication test.
+
+```{r ex3, eval=FALSE}
+#Monin (o), Frank&Holubar (r) ####
+means = c(1.88,2.54,0.02)
+sds = c(1.38,1.95,2.38)
+n = c(19,19,29) #N = 84
+y <- list(NA)
+for (i in 1:3){y[[i]] <- generate.data(n[i],means[i],sds[i])}
+y <- unlist(y)
+group <- c(rep(0,n[1]),rep(1,n[2]),rep(2,n[3]))
+p <- length(unique(group))
+data=data.frame(y=y,g=group)
+aggregate(data$y,by=list(data$g),mean)
+dataMonin <- data
+
+#put file in working directory
+dataFH <- read.csv("Ex3r dataFH.csv")
+aggregate(dataFH$d.Other.Attraction,by=list(dataFH$Condition),mean)
+n <- table(dataFH$Condition)
+
+post <- Gibbs.ANOVA(dataMonin,it=5000,burnin=1000,seed=2019)
+
+Amat <- create_matrices(varnames=c("ob","rsa","r"),"(ob-r)>.8 & (rsa-r)>.0")$Amat
+difmin <-create_matrices(varnames=c("ob","rsa","r"),"(ob-r)>.8 & (rsa-r)>.0")$difmin
+
+F_n.FH <- Fbar.dif(data=dataFH,Amat=Amat,difmin=difmin,effectsize=TRUE)
+ppp.MF <- prior.predictive.check(n=n,posterior=post$posterior,statistic="dif", F_n=F_n.FH, Amat=Amat, difmin=difmin,effectsize=TRUE,seed=2019)
+pow.M <- power.calc(n.r=n,posterior=post$posterior,g.m=mean(dataMonin$y),p.sd=pooled.sd(dataMonin),
+                    statistic="dif",Amat=Amat,difmin=difmin,effectsize=TRUE)
+ss.M <- sample.size.calc(start_n=20,posterior=post$posterior,g.m=mean(dataMonin$y),p.sd=pooled.sd(dataMonin),
+                         statistic="dif",Amat=Amat,difmin=difmin,effectsize=TRUE)
+
+```
+
+The prior predictive $p$-value for the replication of @Monin_2008 by @Holubar_2015 considering $H_\text{RF} is .154 with $\gamma = .77$. Thus, we cannot reject replication of $H_\text{RF}$, but the probability that this is due to a Type II error is .23. 
+According to the \texttt{samp.size.calc} function, the group sample size in a new study needs to be at least 28 per group to achieve sufficient power to reject replication. Since 28 per group seems a conceivable number, we consider the conclusion of @Monin_2008 a suitable candidate for replication testing, but it requires slightly larger sample sizes than currently obtained in @Holubar_2015 to arrive at sharp conclusions. 
+
+
+## Funding
+MZ is supported by the Consortium Individual Development (CID), which is funded through the Gravitation program of the Dutch Ministry of Education, Culture, and Science and the Netherlands Organization for Scientific Research (NWO grant number 024.001.003). RS is supported by a VIDI grant from the Netherlands Organization for Scientific Research (NWO grant number 452.14.006). 
+
+
+\clearpage
+# References

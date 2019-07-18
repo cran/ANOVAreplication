@@ -36,7 +36,7 @@ Gibbs.ANOVA <- function(data,it=5000,burnin=500,seed=0){
   par1=cbind(b1,s1)[-c(1:burnin),]
   par2=cbind(b2,s2)[-c(1:burnin),]
   par=list(par1,par2)
-  output_m <<- rbind(par1,par2)
+  output_m <- rbind(par1,par2)
   colnames(output_m) <- paste("Mean",1:(G+1))
   colnames(output_m)[G+1] <- "SD"
 
@@ -54,5 +54,7 @@ Gibbs.ANOVA <- function(data,it=5000,burnin=500,seed=0){
   results <- cbind(round(apply(output_m,2,mean),4),round(apply(output_m,2,median),4),
                    round(apply(output_m,2,sd),4))
   colnames(results) <- c("mean","median","sd")
-  return(results)
+  print(results)
+  output <- list("summary"=results,"posterior"=output_m)
+  return(output)
 }

@@ -17,7 +17,7 @@ sample.size.calc(start_n,itmax=10,nmax=600,powtarget=.825,powmargin=.025,
   \item{powtarget}{integer; the target power for which the sample size is to be obtained.}
   \item{powmargin}{integer; the margin around the target power for which results are to be returned.}
   \item{posterior}{a matrix (e.g., the output of Gibbs.ANOVA) with samples from the posterior based on the original data (i.e., y_o).}
-  \item{g.m}{integer; the population value for the equal means in the alternative distribution. We advice to specify the grand mean of the study variables in the original dataset.}
+  \item{g.m}{vector; the population values the alternative distribution. To calculate the power to reject replication if the means are equal specify the grand mean of the study variables in the original dataset.}
   \item{p.sd}{integer; the population value for the pooled standard deviation in the alternative distribution. We advice to specify the pooled standard deviation for the study variables in the original dataset.}
 \item{statistic}{the type of hypothesis to be calculated: "ineq" for inequality constrained means, "dif" for inequality constraints plus minimum differences between means, "exact" for specific values for the means.}
 \item{Amat}{a p by q matrix, where p is the number of means in the ANOVA model, and q is the number of constraints to be imposed on the model. Each row represents one constraint where the parameter with the lower value according to the constraint receives the value -1, and the parameter with the higher value according to the constraint receives the value 1. Other parameters within the same row obtain the value 0.}
@@ -40,21 +40,48 @@ M.A.J. Zondervan-Zwijnenburg}
 See also \code{\link{runShiny}}, \code{\link{prior.predictive.check}}, \code{\link{power.calc}}, \code{\link{Fbar.ineq}}, \code{\link{Fbar.dif}}, and \code{\link{Fbar.exact}}.
 }
 \examples{
+\dontshow{
 #analysis original data
 data_o <- data.frame(y=ChickWeight$weight,g=ChickWeight$Diet)
 #compute pooled sd
 sd.g <- aggregate(data_o$y,by=list(data_o$g),sd)[,2]
 n.g <- table(data_o$g)
-p.sd <- ((n.g[1]-1)*sd.g[1]+(n.g[2]-1)*sd.g[2]+(n.g[3]-1)*sd.g[3]+(n.g[4]-1)*sd.g[4])/(sum(n.g)-4)
+p.sd<- pooled.sd(data_o)
 
-Gibbs.ANOVA(data_o,it=75,burnin=50) #we advise >1000 iterations, >500 burnin for reliable results
-Amat <- (rbind(c(-1,0,0,1),c(0,-1,0,1),c(0,0,1,-1)))
-difmin=c(0.8,0.5,0.2)
+post <- Gibbs.ANOVA(data_o,it=50,burnin=50) #we advise >1000 iterations, >500 burnin for reliable results
+#create matrices HR: g4>(g1,g2,g3). g4-g1>0.8, g4-g2>0.5, g4-g3>0.2
+HR <- create_matrices(varnames = c("g1","g2","g3","g4"),
+                      hyp = "g4-g1>0.8 & g4-g2>0.5 & g4-g3>0.2")
+
+Amat <- HR$Amat
+difmin <- HR$difmin
 
 #sample size calculator
-sample.size.calc(start_n=60, powtarget=.825,powmargin=.025,posterior=output_m,
+sample.size.calc(start_n=60, powtarget=.825,powmargin=.025,posterior=post$posterior,
                  g.m=mean(data_o$y),p.sd=p.sd,
                  statistic="dif",effectsize=TRUE,Amat=Amat,difmin=difmin)
+}
+\donttest{
+#analysis original data
+data_o <- data.frame(y=ChickWeight$weight,g=ChickWeight$Diet)
+#compute pooled sd
+sd.g <- aggregate(data_o$y,by=list(data_o$g),sd)[,2]
+n.g <- table(data_o$g)
+p.sd<- pooled.sd(data_o)
+
+Gibbs.ANOVA(data_o)
+#create matrices HR: g4>(g1,g2,g3). g4-g1>0.8, g4-g2>0.5, g4-g3>0.2
+HR <- create_matrices(varnames = c("g1","g2","g3","g4"),
+                      hyp = "g4-g1>0.8 & g4-g2>0.5 & g4-g3>0.2")
+
+Amat <- HR$Amat
+difmin <- HR$difmin
+
+#sample size calculator
+sample.size.calc(start_n=30, powtarget=.825,powmargin=.025,posterior=output_m,
+                 g.m=rep(mean(data_o$y),4),p.sd=p.sd,
+                 statistic="dif",effectsize=TRUE,Amat=Amat,difmin=difmin)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

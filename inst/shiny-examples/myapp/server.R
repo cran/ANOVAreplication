@@ -11,6 +11,7 @@ shinyServer(function(input, output, session) {
     if (is.null(inFile)){return()}
     df_o <- read.csv(inFile$datapath, header=input$header, sep=input$sep)
     names(df_o) <- c("y","g")
+    validate(need(min(df_o$g)==1,message="Label groups in data consecutively, starting at 1"))
     df_o
   })
 
@@ -32,7 +33,7 @@ shinyServer(function(input, output, session) {
 
     y <- list(NA); group <- list(NA)
     for (i in 1:p){
-      y[[i]] <- rnorm2(n[i],means[i],sds[i])
+      y[[i]] <- generate.data(n[i],means[i],sds[i])
       group[[i]] <- rep(i,n[i])
     }
     y <- unlist(y)
@@ -209,6 +210,7 @@ shinyServer(function(input, output, session) {
     if (is.null(inFile1)){return()}
     df_r <- read.csv(inFile1$datapath, header=input$header_r, sep=input$sep_r)
     names(df_r) <- c("y","g")
+    validate(need(min(df_r$g)==1,message="Label groups in data consecutively, starting at 1"))
     df_r
   })
 
@@ -231,7 +233,7 @@ shinyServer(function(input, output, session) {
 
     y <- list(NA); group <- list(NA)
     for (i in 1:p){
-      y[[i]] <- rnorm2(n[i],means[i],sds[i])
+      y[[i]] <- generate.data(n[i],means[i],sds[i])
       group[[i]] <- rep(i,n[i])
     }
     y <- unlist(y)
@@ -255,7 +257,12 @@ shinyServer(function(input, output, session) {
     dataRpresent <- !is.null(data_descr_r()) | !is.null(data_r())
     # Change the selected tab.
     if (dataRpresent) {
-      updateTabsetPanel(session, "outputTabset", selected = "Replication Data")}
+      updateTabsetPanel(session, "outputTabset", selected = "New Data")}
+  })
+
+  observe({
+    if(input$inputTabset == "Replication Test"){
+      updateTabsetPanel(session, "outputTabset", selected = "Original Data")}
   })
 
   output$summary_r1a <- renderText({
@@ -336,6 +343,7 @@ shinyServer(function(input, output, session) {
 
         if (input$addDif==0){difmin=0L
         Fstat <<- Fbar.ineq(data_r.work,Amat)[1]
+        Fstat0 <<- Fbar.ineq(data_o.work,Amat)[1]
         statistic="ineq"; effectsize=FALSE}
         if (input$addDif==1){ #absolute differences
 
@@ -347,6 +355,7 @@ shinyServer(function(input, output, session) {
           validate(need(difmin!="",message="Provide minimum differences."))
 
           Fstat <<- Fbar.dif(data_r.work,Amat,difmin)[1]
+          Fstat0 <<- Fbar.dif(data_o.work,Amat,difmin)[1]
           statistic="dif"; effectsize=FALSE}
         if (input$addDif==2){ #effect size differences
 
@@ -358,6 +367,7 @@ shinyServer(function(input, output, session) {
           validate(need(difmin!="",message="Provide minimum differences."))
 
           Fstat <<- Fbar.dif(data_r.work,Amat,difmin,effectsize=TRUE)[1]
+          Fstat0 <<- Fbar.dif(data_o.work,Amat,difmin,effectsize=TRUE)[1]
           statistic="dif"; effectsize=TRUE}
       }
 
@@ -366,19 +376,41 @@ shinyServer(function(input, output, session) {
         exact = as.numeric(unlist(strsplit(input$exactval,",")))
         validate(need(exact!="",message="Provide the values to replicate."))
         Fstat <<- Fbar.exact(data_r.work,exact)[1]
+        Fstat0 <<- Fbar.exact(data_o.work,exact)[1]
         statistic="exact"; effectsize=FALSE}
 
+      if (input$typehypothesis == "man"){
+        Amat <- create_matrices(unlist(strsplit(input$varnames,",")),input$hyp)$Amat
+        if (input$addDifm==1){difmin <- as.numeric(unlist(strsplit(input$difminm,",")));effectsize=FALSE}
+        if (input$addDifm==2){difmin <- as.numeric(unlist(strsplit(input$difminm,",")));effectsize=TRUE}
+        if (input$addDifm==0){difmin <- create_matrices(unlist(strsplit(input$varnames,",")),input$hyp)$difmin;effectsize=FALSE}
+        statistic="dif"
+        Fstat <<- Fbar.dif(data_r.work,Amat,difmin,effectsize=effectsize)[1]
+        Fstat0 <<- Fbar.dif(data_o.work,Amat,difmin,effectsize=effectsize)[1]}
+
       output_G <- output_Gibbs()
-      outputppc <<- prior.predictive.check(n=n.r,posterior=output_G,F_obs=Fstat,statistic=statistic,
+      validate(need(Fstat0==0,"The constraints should be in line with the original data, please correct the hypothesis."))
+      outputppc <<- prior.predictive.check(n=n.r,posterior=output_G,F_n=Fstat,statistic=statistic,
                                            Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize,seed=as.numeric(input$seed))
-      Fbar <<- Fps
+      Fbar <<- outputppc$F_sim
     })
   })
 
-  output$priorpred <- renderPrint({
+  output$priorpred.p <- renderPrint({
     if (is.null(results.ppc())){return(invisible())}
-    outputppc
+    paste("prior predictive p-value = ", outputppc$`prior predictive p-value`)
   })
+
+  output$priorpred.s <- renderPrint({
+    if (is.null(results.ppc())){return(invisible())}
+    paste("Summary F-bar in predicted data = \n", outputppc$`distribution F-bar given original data`)
+  })
+
+  output$priorpred.f <- renderPrint({
+    if (is.null(results.ppc())){return(invisible())}
+    paste("F-bar in the new data = ", outputppc$`F-bar replication data`)
+  })
+
 
   #ppc plot ####
   Mode <- function(x) {
@@ -458,14 +490,16 @@ shinyServer(function(input, output, session) {
   })
 
 
-  #sample size calculator ####
-  results.ppp <- reactive({
-    if (input$runButton_sampcalc == 0){return()}
+  #power calculator ####
+  results.basicpower <- reactive({
+    if (input$runButton_powercalc == 0){return()}
     validate(need(output_Gibbs(),message="Obtain the posterior distribution in the Original Study tab first."))
 
     isolate({
       if (input$typepriorinput == 1){data_o.work <- data_o()}
       if (input$typepriorinput == 2){data_o.work <- data_descr()}
+
+      n.r <- as.numeric(unlist(strsplit(input$nF,",")))
 
       if (input$typehypothesis_N == "ineq"){
         Amat_1a <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_a', i)]])
@@ -483,33 +517,162 @@ shinyServer(function(input, output, session) {
 
         exact_N=0L;
 
-        if (input$addDif_N==0){difmin_N=0L; effectsize_N = FALSE; statistic="ineq"}
+        if (input$addDif_N==0){difmin_N=0L; effectsize_N = FALSE; statistic_N="ineq"
+        Fstat0p <<- Fbar.ineq(data_o.work,Amat_N)[1]}
         if (input$addDif_N==1){ #absolute differences
           difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
           difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
           difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
-          difmin_N <- do.call(c,difmin_3); effectsize_N = FALSE; statistic="dif"}
+          difmin_N <- do.call(c,difmin_3); effectsize_N = FALSE; statistic_N="dif"
+          Fstat0p <<- Fbar.dif(data_o.work,Amat_N,difmin_N)[1]}
         if (input$addDif_N==2){ #effect size differences
           difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
           difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
           difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
           difmin_N <- do.call(c,difmin_3)
-          effectsize_N = TRUE; statistic="dif"}
+          effectsize_N = TRUE; statistic_N="dif"
+          Fstat0p <<- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize=effectsize_N)[1]}
       }
       if (input$typehypothesis_N == "exact"){
-        Amat_N = 0L; difmin_N=0L; statistic="exact"; effectsize_N = FALSE
-        exact_N = as.numeric(unlist(strsplit(input$exactval_N,",")))}
+        Amat_N = 0L; difmin_N=0L; statistic_N="exact"; effectsize_N = FALSE
+        exact_N = as.numeric(unlist(strsplit(input$exactval_N,",")))
+        Fstat0p <<- Fbar.exact(data_o.work,exact_N)[1]}
+
+      if (input$typehypothesis_N == "man"){
+        Amat_N <- create_matrices(unlist(strsplit(input$varnames_N,",")),input$hyp_N)$Amat
+        if (input$addDif_Nm==1){
+          difmin_N <- as.numeric(unlist(strsplit(input$difmin_Nm,",")))
+          effectsize_N=FALSE}
+        if (input$addDif_Nm==2){
+          difmin_N <- as.numeric(unlist(strsplit(input$difmin_Nm,",")))
+          effectsize_N=TRUE}
+        if (input$addDif_Nm==0){
+          difmin_N <- create_matrices(unlist(strsplit(input$varnames_N,",")),input$hyp_N)$difmin
+          effectsize_N=FALSE}
+        statistic_N="dif"
+        Fstat0s <<- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize=effectsize_N)[1]}
+
+      if(input$Ha == FALSE){
+        g.m_N<-as.numeric(unlist(strsplit(input$Ha_N,",")))}else{
+          g.m_N<-mean(data_o.work$y)}
 
       output_G <- output_Gibbs()
-      #nsample= dim(output_G)[1]
-      #sample.r <- sample(1:dim(output_G)[1],nsample)
+      validate(need(Fstat0p==0,"The constraints should be in line with the original data, please correct the hypothesis."))
 
-      outputsampcalc <<- power.ppp(start_n=as.numeric(input$start_n),itmax=as.numeric(input$maxit),
-                                   powtarget=as.numeric(input$Powtarget),powmargin=as.numeric(input$Powmargin),
-                                   posterior=output_G,g.m=mean(data_o.work$y),p.sd=pooled.sd(data_o.work),
-                                   statistic=statistic,
-                                   Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
-                                   nmax=as.numeric(input$maxN),alpha=as.numeric(input$alpha))
+      outputpowercalc <<- power.calc(n.r=n.r,posterior=output_G,g.m=g.m_N,p.sd=pooled.sd(data_o.work),
+                                     statistic=statistic_N,Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
+                                     alpha=as.numeric(input$alpha))
+    })
+  })
+
+  observe({
+    # Change the selected tab.
+    if (input$runButton_powercalc == 1) {
+      updateTabsetPanel(session, "outputTabset", selected = "Sample Size & Power Output")}
+  })
+
+  output$powercalc <- renderPrint({
+    if (is.null(results.basicpower())){return(invisible())}
+    outputpowercalc
+  })
+
+  output$Fpsbasicpower<- renderPlot({
+    if (is.null(results.basicpower())){return()}
+    hist(Fps.power.H0,freq=FALSE,col=rgb(1,0,0,1/4),border=rgb(1,0,0,1/2),main="",xlab=expression(italic(bar(F)[bold(y)]))) #null with true effect
+    hist(Fps.power.H1,freq=FALSE,col=rgb(0,0,1,1/4),border=rgb(0,0,1,1/2),add=TRUE) #H1, means equal
+    abline(v=rej.value,col=rgb(1,0,1,1/2),lwd=2)
+  })
+
+  output$helptext3power <- renderText({
+    if (is.null(results.basicpower())){return()}
+    paste(
+      "Below you can find the results of the power calculator for the prior predictive check. ",
+      "In print, the observed power and the 1-alpha'th value of the null distribution are provided. ",
+      "The red distribution is composed of F-bars for datasets from a population in which replication holds (i.e., the null distribution). ",
+      "The blue distribution shows F-bars from a population with equal means for which replication should be rejected (i.e., the alternative distribution).",
+      "The vertical line indicates the critical value located at 1-alpha'th percentile of the null distribution. ",
+      "The proportion of the alternative distribution at the right side of the critical value constitutes statical power. ")
+  })
+
+
+
+
+  #sample size calculator ####
+  results.ppp <- reactive({
+    if (input$runButton_sampcalc == 0){return()}
+    validate(need(output_Gibbs(),message="Obtain the posterior distribution in the Original Study tab first."))
+
+    isolate({
+      if (input$typepriorinput == 1){data_o.work <- data_o()}
+      if (input$typepriorinput == 2){data_o.work <- data_descr()}
+
+
+
+      if (input$typehypothesis_N == "ineq"){
+        Amat_1a <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_a', i)]])
+        Amat_2a <- lapply(1:input$nh_N,function(i) unlist(Amat_1a[[i]]))
+        Amat_3a <- do.call(c,Amat_2a)
+
+        Amat_1b <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_b', i)]])
+        Amat_2b <- lapply(1:input$nh_N,function(i) unlist(Amat_1b[[i]]))
+        Amat_3b <- do.call(c,Amat_2b)
+
+        Amat_N <- matrix(0,nrow = input$nh_N,ncol=data_o.gibbs$p)
+        for(i in 1:input$nh_N){
+          Amat_N[i,Amat_3a[i]] <- 1
+          Amat_N[i,Amat_3b[i]] <- -1}
+
+        exact_N=0L;
+
+        if (input$addDif_N==0){difmin_N=0L; effectsize_N = FALSE; statistic_N="ineq"
+        Fstat0s <<- Fbar.ineq(data_o.work,Amat_N)[1]}
+        if (input$addDif_N==1){ #absolute differences
+          difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
+          difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
+          difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
+          difmin_N <- do.call(c,difmin_3)
+          effectsize_N = FALSE; statistic_N="dif"
+          Fstat0s <<- Fbar.dif(data_o.work,Amat_N,difmin_N)[1]}
+        if (input$addDif_N==2){ #effect size differences
+          difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
+          difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
+          difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
+          difmin_N <- do.call(c,difmin_3)
+          effectsize_N = TRUE; statistic_N="dif"
+          Fstat0s <<- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize_N)[1]}
+      }
+      if (input$typehypothesis_N == "exact"){
+        Amat_N = 0L; difmin_N=0L; statistic_N="exact"; effectsize_N = FALSE
+        exact_N = as.numeric(unlist(strsplit(input$exactval_N,",")))
+        Fstat0s <<- Fbar.exact(data_o.work,exact_N)[1]}
+
+      if (input$typehypothesis_N == "man"){
+        Amat_N <- create_matrices(unlist(strsplit(input$varnames_N,",")),input$hyp_N)$Amat
+        if (input$addDif_Nm==1){
+          difmin_N <- as.numeric(unlist(strsplit(input$difmin_Nm,",")))
+          effectsize_N=FALSE}
+        if (input$addDif_Nm==2){
+          difmin_N <- as.numeric(unlist(strsplit(input$difmin_Nm,",")))
+          effectsize_N=TRUE}
+        if (input$addDif_Nm==0){
+          difmin_N <- create_matrices(unlist(strsplit(input$varnames_N,",")),input$hyp_N)$difmin
+          effectsize_N=FALSE}
+        statistic_N="dif"
+        Fstat0s <<- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize_N)[1]}
+
+      if(input$Ha == FALSE){
+        g.m_N<-as.numeric(unlist(strsplit(input$Ha_N,",")))}else{
+          g.m_N<-mean(data_o.work$y)}
+
+      output_G <- output_Gibbs()
+      validate(need(Fstat0s==0,"The constraints should be in line with the original data, please correct the hypothesis."))
+
+      outputsampcalc <<- sample.size.calc(start_n=as.numeric(input$start_n),itmax=as.numeric(input$maxit),
+                                          powtarget=as.numeric(input$Powtarget),powmargin=as.numeric(input$Powmargin),
+                                          posterior=output_G,g.m=g.m_N,p.sd=pooled.sd(data_o.work),
+                                          statistic=statistic_N,
+                                          Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
+                                          nmax=as.numeric(input$maxN),alpha=as.numeric(input$alpha))
 
     })
   })
@@ -540,90 +703,6 @@ shinyServer(function(input, output, session) {
       "Subsequently, the matrix with the output is given. ",
       "The number in column n per group is the sample size per group, the value on the right is the associated power.",
       "The histogram is based on information for the last sample size and power calculated.",
-      "The red distribution is composed of F-bars for datasets from a population in which replication holds (i.e., the null distribution). ",
-      "The blue distribution shows F-bars from a population with equal means for which replication should be rejected (i.e., the alternative distribution).",
-      "The vertical line indicates the critical value located at 1-alpha'th percentile of the null distribution. ",
-      "The proportion of the alternative distribution at the right side of the critical value constitutes statical power. ")
-  })
-
-  #power calculator ####
-  results.basicpower <- reactive({
-    if (input$runButton_powercalc == 0){return()}
-    validate(need(output_Gibbs(),message="Obtain the posterior distribution in the Original Study tab first."))
-
-    isolate({
-      if (input$typepriorinput == 1){data_o.work <- data_o()}
-      if (input$typepriorinput == 2){data_o.work <- data_descr()}
-
-      n.r <- as.numeric(unlist(strsplit(input$nF,",")))
-
-      if (input$typehypothesis_N == "ineq"){
-        Amat_1a <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_a', i)]])
-        Amat_2a <- lapply(1:input$nh_N,function(i) unlist(Amat_1a[[i]]))
-        Amat_3a <- do.call(c,Amat_2a)
-
-        Amat_1b <- lapply(1:input$nh_N, function(i) input[[paste0('Amat_N_b', i)]])
-        Amat_2b <- lapply(1:input$nh_N,function(i) unlist(Amat_1b[[i]]))
-        Amat_3b <- do.call(c,Amat_2b)
-
-        Amat_N <- matrix(0,nrow = input$nh_N,ncol=data_o.gibbs$p)
-        for(i in 1:input$nh_N){
-          Amat_N[i,Amat_3a[i]] <- 1
-          Amat_N[i,Amat_3b[i]] <- -1}
-
-        exact_N=0L;
-
-        if (input$addDif_N==0){difmin_N=0L; effectsize_N = FALSE; statistic="ineq"}
-        if (input$addDif_N==1){ #absolute differences
-          difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
-          difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
-          difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
-          difmin_N <- do.call(c,difmin_3); effectsize_N = FALSE; statistic="dif"}
-        if (input$addDif_N==2){ #effect size differences
-          difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
-          difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
-          difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
-          difmin_N <- do.call(c,difmin_3)
-          effectsize_N = TRUE; statistic="dif"}
-      }
-      if (input$typehypothesis_N == "exact"){
-        Amat_N = 0L; difmin_N=0L; statistic="exact"; effectsize_N = FALSE
-        exact_N = as.numeric(unlist(strsplit(input$exactval_N,",")))}
-
-      output_G <- output_Gibbs()
-      #nsample= dim(output_G)[1]
-      #sample.r <- sample(1:dim(output_G)[1],nsample)
-
-      outputpowercalc <<- power.basic(nF=n.r,posterior=output_G,g.m=mean(data_o.work$y),p.sd=pooled.sd(data_o.work),
-                                   statistic=statistic,Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
-                                   alpha=as.numeric(input$alpha))
-
-    })
-  })
-
-  observe({
-    # Change the selected tab.
-    if (input$runButton_powercalc == 1) {
-      updateTabsetPanel(session, "outputTabset", selected = "Sample Size & Power Output")}
-  })
-
-  output$powercalc <- renderPrint({
-    if (is.null(results.basicpower())){return(invisible())}
-    outputpowercalc
-  })
-
-  output$Fpsbasicpower<- renderPlot({
-    if (is.null(results.basicpower())){return()}
-    hist(Fps.power.H0,freq=FALSE,col=rgb(1,0,0,1/4),border=rgb(1,0,0,1/2),main="",xlab=expression(italic(bar(F)[bold(y)]))) #null with true effect
-    hist(Fps.power.H1,freq=FALSE,col=rgb(0,0,1,1/4),border=rgb(0,0,1,1/2),add=TRUE) #H1, means equal
-    abline(v=rej.value,col=rgb(1,0,1,1/2),lwd=2)
-  })
-
-  output$helptext3power <- renderText({
-    if (is.null(results.basicpower())){return()}
-    paste(
-      "Below you can find the results of the power calculator for the prior predictive check. ",
-      "In print, the observed power and the 1-alpha'th value of the null distribution are provided. ",
       "The red distribution is composed of F-bars for datasets from a population in which replication holds (i.e., the null distribution). ",
       "The blue distribution shows F-bars from a population with equal means for which replication should be rejected (i.e., the alternative distribution).",
       "The vertical line indicates the critical value located at 1-alpha'th percentile of the null distribution. ",

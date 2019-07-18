@@ -14,7 +14,7 @@ power.calc <- function(n.r,posterior,g.m,p.sd,
 
   #alternative distr. = F scores when all group means are equal (g.m = general mean original)
   #the SD of the y-data is that of the original dataset (p.sd)
-  power.H1 <- prior.predictive.check(n=n.r,posterior=cbind(matrix(g.m,nrow=lFps,ncol=p),rep(p.sd,lFps)),
+  power.H1 <- prior.predictive.check(n=n.r,posterior=cbind(matrix(g.m,nrow=lFps,ncol=p,byrow=TRUE),rep(p.sd,lFps)),
                                      obs=FALSE,statistic=statistic,Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize)
   Fps.power.H1 <- power.H1$F_sim
 
@@ -27,6 +27,6 @@ power.calc <- function(n.r,posterior,g.m,p.sd,
        breaks=c(seq(0,max(Fps.power.H1)+10)),add=TRUE) #H1, means equal
   abline(v=rej.value,col=rgb(1,0,1,1/2),lwd=2) #power is blue at the right side of this line
 
-  return.info <- list(power=power.out,rejection.value=rej.value)
+  return.info <- list(power=power.out,rejection.value=rej.value,F.H0=Fps.power.H0,F.H1=Fps.power.H1)
   return(return.info)
 }

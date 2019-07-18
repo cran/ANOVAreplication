@@ -5,9 +5,8 @@ shinyUI(fluidPage(
 
   titlePanel("ANOVA Replication App"),
   withTags({
-    tags$p("This application is associated with the paper: Zondervan-Zwijnenburg, M.A.J., Van de Schoot, R., and
-           Hoijtink, H. (2017). Testing ANOVA replication by means of the prior predictive p-value.
-           With the application the replication of specific ANOVA features can be tested by means of a sampling-based prior predictive check.
+    tags$p("This application is associated with the paper: Testing ANOVA replication by means of the prior predictive p-value.
+           With the application the failure to replicate specific ANOVA features can be tested by means of a sampling-based prior predictive check.
            Additionally, the total sample size can be calculated to reject replication for populations with equal means.
            Associated files and documentation can be found at",tags$a(href="https://osf.io/6h8x3","osf.io/6h8x3"),".")
   }),
@@ -130,7 +129,8 @@ shinyUI(fluidPage(
                                                   radioButtons("typehypothesis",
                                                                label = h5("Type of hypothesis"),
                                                                choices = list("Inequality constraint(s)" = "ineq",
-                                                                              "Exact mean values" = "exact"),
+                                                                              "Exact mean values" = "exact",
+                                                                              "Manual input" = "man"),
                                                                selected = character(0)),
                                                   conditionalPanel("input.typehypothesis == 'ineq'",
                                                                    sliderInput("nh", "Number of constraints:",
@@ -158,6 +158,23 @@ shinyUI(fluidPage(
                                                   conditionalPanel("input.typehypothesis == 'exact'",
                                                                    p("Type the exact values to replicate below separated by commas."),
                                                                    textInput("exactval", label = h5("Exact mean values"), value = "", width = '50%')),
+                                                  conditionalPanel("input.typehypothesis == 'man'",
+                                                                   p("Type the group names below in the order of the grouping variable, separated by commas."),
+                                                                   textInput("varnames", label = h5("Group names"), value = "", width = '50%'),
+                                                                   p("Type the relevant features in the text box below.",
+                                                                     "The hypothesis consists of a (series of) (in)equality constraint(s).",
+                                                                     #"Every single (in)equality constraint is of the form R1*mu1 + R2*mu2+... = r,",
+                                                                     #"where capital Rs refer to numeric scaling constants, must refer to the names of parameters in the model, and the lower case r refers to a constant.",
+                                                                     #"Standard mathematical simplification rules apply; thus, R1*mu1 = R2*mu2 is equivalent to R1*mu1 - R2*mu2 = 0.",
+                                                                     "Connect multiple unrelated constraints within one hypothesis by &. Thus, a=b&c=d means that HR: a=b AND c=d.",
+                                                                     "Multiple related constraints within one hypothesis can be chained by repeating the (in)equality operators =, <, or >.",
+                                                                     "Thus, a<b<c means that HR: a < b AND b < c.",
+                                                                     "Parameters can be grouped by placing them in a parenthesized, comma separated list. Thus, (a,b)>c means that H1: a > c AND b > c.",
+                                                                     "Similarly, (a,b)>(c,d) means that H1: a > c AND b > c AND b > c AND b > d."),
+                                                                   textInput("hyp", label = h5("Relevant Features"), value = "", width = '50%'),
+                                                                   radioButtons("addDifm",label="Do you want to add minimum differences between means?",
+                                                                                choices=list("Yes, absolute differences"=1, "Yes, effect sizes"=2,"No"=0),selected=0),
+                                                                   textInput("difminm", label = h5("Difference"), value = "", width = '50%')),
                                                   textInput("seed", label = h5("To obtain fixed results, set a seed value other than 0."),value=0),
                                                   p("Note that running the analysis may take a couple of minutes."),
                                                   actionButton("runButton_priorpred", "Run the replication test")),
@@ -165,16 +182,21 @@ shinyUI(fluidPage(
                                          tabPanel("Sample Size & Power Calculator",
                                                   br(),
                                                   p("Here you can (1) determine the sample size for a new study with sufficient power to reject",
-                                                    "replication when all means are equal, or (2) calculate the power to reject replication with", 
+                                                    "replication when all means are equal, or (2) calculate the power to reject replication with",
                                                     "prespecified group sample sizes."),
                                                   p("Upload or provide descriptives of the original data first in the tab 'Original study' and obtain the posterior distribution."),
                                                   radioButtons("SampcalcVSPower",
                                                                label=h5("Type of Calculator"),
                                                                choices=list("Sample Size Calculator"=1,"Power Calculator"=2)),
+                                                  checkboxInput("Ha", "Power/sample size to reject replication in a population with equal means", TRUE),
+                                                  conditionalPanel("input.Ha == 0",
+                                                                   p("Type the means per group for the alternative population separated by commas."),
+                                                                   textInput("Ha_N", label = h5("Means in Ha"), value = "", width = '50%')),
                                                   radioButtons("typehypothesis_N",
                                                                label = h5("Type of hypothesis to be replicated"),
                                                                choices = list("Inequality constraint(s)" = "ineq",
-                                                                              "Exact mean values" = "exact"),
+                                                                              "Exact mean values" = "exact",
+                                                                              "Manual input" = "man"),
                                                                selected = character(0)),
                                                   conditionalPanel("input.typehypothesis_N == 'ineq'",
                                                                    sliderInput("nh_N", "Number of constraints:",
@@ -199,36 +221,58 @@ shinyUI(fluidPage(
                                                                                                        textInput(paste0('difmin_N',i), label = h5(paste0('Difference ',i)),
                                                                                                                  value = "", width = '50%'))}))),
 
+
                                                   conditionalPanel("input.typehypothesis_N == 'exact'",
                                                                    p("Type the exact values to replicate below separated by commas."),
                                                                    textInput("exactval_N", label = h5("Exact mean values"), value = "", width = '50%')),
-                                                  
+
+                                                  conditionalPanel("input.typehypothesis_N == 'man'",
+                                                                   p("Type the group names below in the order of the grouping variable, separated by commas."),
+                                                                   textInput("varnames_N", label = h5("Group names"), value = "", width = '50%'),
+                                                                   p("Type the relevant features in the text box below.",
+                                                                     "The hypothesis consists of a (series of) (in)equality constraint(s).",
+                                                                     #"Every single (in)equality constraint is of the form R1*mu1 + R2*mu2+... = r,",
+                                                                     #"where capital Rs refer to numeric scaling constants, must refer to the names of parameters in the model, and the lower case r refers to a constant.",
+                                                                     #"Standard mathematical simplification rules apply; thus, R1*mu1 = R2*mu2 is equivalent to R1*mu1 - R2*mu2 = 0.",
+                                                                     "Connect multiple unrelated constraints within one hypothesis by &. Thus, a=b&c=d means that HR: a=b AND c=d.",
+                                                                     "Multiple related constraints within one hypothesis can be chained by repeating the (in)equality operators =, <, or >.",
+                                                                     "Thus, a<b<c means that HR: a < b AND b < c.",
+                                                                     "Parameters can be grouped by placing them in a parenthesized, comma separated list. Thus, (a,b)>c means that H1: a > c AND b > c.",
+                                                                     "Similarly, (a,b)>(c,d) means that H1: a > c AND b > c AND b > c AND b > d."),
+                                                                   textInput("hyp_N", label = h5("Relevant Features"), value = "", width = '50%'),
+                                                                   radioButtons("addDif_Nm",label="Do you want to add minimum differences between means?",
+                                                                                choices=list("Yes, absolute differences"=1, "Yes, effect sizes"=2,"No"=0),selected=0),
+                                                                   conditionalPanel("input.addDif_Nm != 0",p("Provide the minimum difference for each constraint separated by comma's"),
+                                                                                    textInput("difmin_Nm", label = h5("Difference"), value = "", width = '50%'))),
+
+
                                                   conditionalPanel("input.SampcalcVSPower == 1",
-                                                                   
-                                                  p("Note that running the analysis may take a while. ",
-                                                    "A trial run with max two iterations (option below) may give an indication for a good starting n (option below). ",
-                                                    "In the right upper corner of the results tab, you see a progress indicator when the calculations are running.",
-                                                    "You can limit computation time by providing a better starting value for n, limiting the number of iterations ",
-                                                    "in the Bayesian analysis (Original Data tab), limiting the number of iterations below, or by limiting the maximum total sample size below.",
-                                                    "Note that fewer iterations in the Bayesian analysis and in sample size calculations may reduce the quality of the calculations."),
-                                                  
-                                                  bootstrapPage(
-                                                    div(style="display:inline-block",textInput("Powtarget", label = h5("Target power"),
-                                                                                               value = ".825", width = '4.5cm')),
-                                                    div(style="display:inline-block",textInput("Powmargin", label = h5("Margin for target power"),
-                                                                                               value = ".025", width = '4.5cm')),
-                                                    div(style="display:inline-block",textInput("alpha", label = h5("Alpha level"),
-                                                                                               value = ".05", width = '4.5cm'))),
-                                                  br(),
-                                                  bootstrapPage(
-                                                    div(style="display:inline-block",textInput("start_n", label = h5("n per group to start calculations with"),
-                                                                                               value = "20", width = '4.5cm')),
-                                                    div(style="display:inline-block",textInput("maxit", label = h5("Maximum number of iterations"),
-                                                                                               value = "10", width = '4.5cm')),
-                                                    div(style="display:inline-block",textInput("maxN", label = h5("Maximum total sample size"),
-                                                                                               value = "600", width = '4.5cm'))),
-                                                  br(),
-                                                  actionButton("runButton_sampcalc", "Run sample size calculations")),
+
+                                                                   p("Note that running the analysis may take a while. ",
+                                                                     "A trial run with max two iterations (option below) may give an indication for a good starting n (option below). ",
+                                                                     "In the right upper corner of the results tab, you see a progress indicator when the calculations are running.",
+                                                                     "You can limit computation time by providing a better starting value for n, limiting the number of iterations ",
+                                                                     "in the Bayesian analysis (Original Data tab), limiting the number of iterations below, or by limiting the maximum total sample size below.",
+                                                                     "Note that fewer iterations in the Bayesian analysis and in sample size calculations may reduce the quality of the calculations."),
+
+                                                                   bootstrapPage(
+                                                                     div(style="display:inline-block",textInput("Powtarget", label = h5("Target power"),
+                                                                                                                value = ".825", width = '4.5cm')),
+                                                                     div(style="display:inline-block",textInput("Powmargin", label = h5("Margin for target power"),
+                                                                                                                value = ".025", width = '4.5cm')),
+                                                                     div(style="display:inline-block",textInput("alpha", label = h5("Alpha level"),
+                                                                                                                value = ".05", width = '4.5cm'))),
+                                                                   br(),
+                                                                   bootstrapPage(
+                                                                     div(style="display:inline-block",textInput("start_n", label = h5("n per group to start calculations with"),
+                                                                                                                value = "20", width = '4.5cm')),
+                                                                     div(style="display:inline-block",textInput("maxit", label = h5("Maximum number of iterations"),
+                                                                                                                value = "10", width = '4.5cm')),
+                                                                     div(style="display:inline-block",textInput("maxN", label = h5("Maximum total sample size"),
+                                                                                                                value = "600", width = '4.5cm'))),
+
+                                                                   br(),
+                                                                   actionButton("runButton_sampcalc", "Run sample size calculations")),
                                                   conditionalPanel("input.SampcalcVSPower == 2",
                                                                    bootstrapPage(
                                                                      div(style="display:inline-block",textInput("nF", label = h5("Sample size per group in the new study, comma seperated"),
@@ -285,9 +329,11 @@ shinyUI(fluidPage(
                                       tabPanel("Replication Test Results",
                                                br(),
                                                textOutput("helptext2"),
-                                               br(),
-                                               verbatimTextOutput("priorpred"),
                                                plotOutput("Fps"),
+                                               br(),
+                                               verbatimTextOutput("priorpred.p"),
+                                               #verbatimTextOutput("priorpred.s"),
+                                               verbatimTextOutput("priorpred.f"),
                                                br(),
                                                downloadButton("downloadData", "Download simulated F values"),
                                                downloadButton("downloadPlot", "Download histogram"),
@@ -315,4 +361,4 @@ shinyUI(fluidPage(
     "You must ensure that you are lawfully entitled and have full authority to upload  data in the web application. The file data must not contain any  data which can raise issues relating to abuse, confidentiality, privacy,  data protection, licensing, and/or intellectual property. You shall not upload data with any confidential or proprietary information that you desire or are required to keep secret.") ,
   hr()
 
-    ))
+))

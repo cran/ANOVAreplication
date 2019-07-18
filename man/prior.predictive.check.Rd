@@ -34,23 +34,53 @@ M. A. J. Zondervan-Zwijnenburg}
 See also \code{\link{runShiny}}, \code{\link{Gibbs.ANOVA}}, \code{\link{Fbar.ineq}}, \code{\link{Fbar.dif}}, and \code{\link{Fbar.exact}}, \code{\link{sample.size.calc}}, \code{\link{power.calc}}.
 }
 \examples{
+\dontshow{
 #analysis original data
 data_o <- data.frame(y=ChickWeight$weight,g=ChickWeight$Diet)
-Gibbs.ANOVA(data_o,it=75,burnin=50) #we advise >1000 iterations, >500 burnin for reliable results
+post <- Gibbs.ANOVA(data_o,it=75,burnin=50) #we advise >1000 iterations, >500 burnin for reliable results
 
 #analysis new data
 data_r <- data.frame(y=rnorm(660, mean(data_o$y), sd=sd(data_o$y)),g=round(runif(660,1,4)))
 n.r = as.numeric(table(data_r$g))
-Amat <- (rbind(c(-1,0,0,1),c(0,-1,0,1),c(0,0,-1,1)))
-difmin=c(0.8,0.5,0.2)
+
+#HR: g4>(g1,g2,g3). g4-g1>0.8, g4-g2>0.5, g4-g3>0.2
+HR <- create_matrices(varnames = c("g1","g2","g3","g4"),
+                      hyp = "g4-g1>0.8 & g4-g2>0.5 & g4-g3>0.2")
+
+Amat <- HR$Amat
+difmin <- HR$difmin
 r.F.dif.efsz <- Fbar.dif(data_r,Amat,difmin,effectsize=TRUE)
 
 #prior predictive check
-result <- prior.predictive.check(n=n.r,posterior=output_m,F_n=r.F.dif.efsz,statistic="dif",
+result <- prior.predictive.check(n=n.r,posterior=post$posterior,F_n=r.F.dif.efsz,statistic="dif",
+effectsize=TRUE,Amat=Amat,difmin=difmin,seed=1)
+
+result$sumFdist #summary of the f(F_y_sim)
+result$ppp      #the prior predictive p-value}
+\donttest{
+#analysis original data
+data_o <- data.frame(y=ChickWeight$weight,g=ChickWeight$Diet)
+post <- Gibbs.ANOVA(data_o)
+
+#analysis new data
+data_r <- data.frame(y=rnorm(660, mean(data_o$y), sd=sd(data_o$y)),g=round(runif(660,1,4)))
+n.r = as.numeric(table(data_r$g))
+
+#create matrices HR: g4>(g1,g2,g3). g4-g1>0.8, g4-g2>0.5, g4-g3>0.2
+HR <- create_matrices(varnames = c("g1","g2","g3","g4"),
+                      hyp = "g4-g1>0.8 & g4-g2>0.5 & g4-g3>0.2")
+
+Amat <- HR$Amat
+difmin <- HR$difmin
+r.F.dif.efsz <- Fbar.dif(data_r,Amat,difmin,effectsize=TRUE)
+
+#prior predictive check
+result <- prior.predictive.check(n=n.r,posterior=post$posterior,F_n=r.F.dif.efsz,statistic="dif",
 effectsize=TRUE,Amat=Amat,difmin=difmin,seed=1)
 
 result$sumFdist #summary of the f(F_y_sim)
 result$ppp      #the prior predictive p-value
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

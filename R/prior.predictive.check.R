@@ -10,6 +10,8 @@
 prior.predictive.check <- function(n,posterior,statistic,obs=TRUE,F_n,
                                    Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,
                                    seed=0){
+  warning("The constraints should be in line with the original data. Test this by computing F-bar for the original data. The resulting F-bar should equal 0. ", call. = FALSE)
+
   if(seed!=0){
     set.seed(seed)}
 
@@ -63,13 +65,13 @@ prior.predictive.check <- function(n,posterior,statistic,obs=TRUE,F_n,
     #par(mfrow=c(1,1),mar=c(5.1,4.1,4.1,2.1))
     #hist(Fps,main="",xlab="",freq=TRUE,las=1)
     #abline(v=F_n,col="red")
-    
+
     #make plot 2
     par(mfrow=c(1,1),mar=c(5.1,4.1,4.1,2.1))
     Mode <- function(x) {
       ux <- unique(x)
       ux[which.max(tabulate(match(x, ux)))]}
-    
+
     if(sum(Fps==Mode(Fps))/length(Fps)>=.10){
       h <- hist(Fps[-which(Fps==Mode(Fps))],ylim=c(0,sum(Fps==Mode(Fps))),xlab=expression(italic(bar(F)[bold(y)][r])),ylab="Frequency",main="",breaks=20)
       hist(Fps[-which(Fps==Mode(Fps))],ylim=c(0,max(sum(Fps==Mode(Fps)),h$counts[1])),
