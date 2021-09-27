@@ -40,7 +40,7 @@ shinyServer(function(input, output, session) {
     group <- unlist(group)
     #save the data for gibbs
     if (input$typepriorinput==2){
-      data_o.gibbs <<- list(y=y,g=group,p=p,N=sum(n))}
+      data_o.gibbs <- list(y=y,g=group,p=p,N=sum(n))}
     data.frame(y,group)
   })
 
@@ -66,7 +66,7 @@ shinyServer(function(input, output, session) {
     data_o.n <- length(data_o.work[,1])         #sample size
     #save the data for gibbs
     if (input$typepriorinput==1){
-      data_o.gibbs <<- list(y=data_o.work[,1],g=data_o.work[,2],p=data_o.p,N=data_o.n)}
+      data_o.gibbs <- list(y=data_o.work[,1],g=data_o.work[,2],p=data_o.p,N=data_o.n)}
 
     paste("The total sample size is:", data_o.n)
   })
@@ -85,7 +85,7 @@ shinyServer(function(input, output, session) {
     data_o.n <- length(data_o.work[,1])         #sample size
     #save the data for gibbs
     if (input$typepriorinput==2){
-      data_o.gibbs <<- list(y=data_o.work[,1],g=data_o.work[,2],p=data_o.p,N=data_o.n)}
+      data_o.gibbs <- list(y=data_o.work[,1],g=data_o.work[,2],p=data_o.p,N=data_o.n)}
 
     paste("The total sample size is:", data_o.n)
   })
@@ -120,7 +120,7 @@ shinyServer(function(input, output, session) {
       burnin=500
       I<-as.numeric(input$n.iter)+as.numeric(input$n.burnin)
       #read only observations with complete information
-      data<- data_o.gibbs
+      data <- data_o.gibbs
       x=data$g
       y=data$y
       N=length(y)
@@ -150,12 +150,11 @@ shinyServer(function(input, output, session) {
       }
 
       ## plot posterior density for parameters of interest with indications for credible interval
-      par1<<-cbind(b1,s1)[-c(1:burnin),] #100 for burnin
-      par2<<-cbind(b2,s2)[-c(1:burnin),]
+      par1<-cbind(b1,s1)[-c(1:burnin),] #100 for burnin
+      par2<-cbind(b2,s2)[-c(1:burnin),]
       output_G <- rbind(par1,par2)
       colnames(output_G) <- paste("Mean",1:(G+1))
       colnames(output_G)[G+1] <- "SD"
-      #output_G <<- output_G
       output_G
     })
   })
@@ -192,6 +191,8 @@ shinyServer(function(input, output, session) {
     if (is.null(output_Gibbs())){return(invisible())}
     output_G <- output_Gibbs()
 
+    oldpar <- par(no.readonly = TRUE)    # code line i
+    on.exit(par(oldpar))                 # code line i + 1
     par(mfrow = c(data_o.gibbs$p+1, 2), mar = rep(2, 4))
 
     for (j in 1:(data_o.gibbs$p+1)) {
@@ -244,12 +245,12 @@ shinyServer(function(input, output, session) {
   #tables
   output$contents_r <- renderTable({
     if (is.null(data_r())){return()}
-    data_r.work <<- data_r()
+    data_r.work <- data_r()
     data_r.work
   })
   output$contents_descr_r <- renderTable({
     if (is.null(data_descr_r())){return()}
-    data_r.work <<- data_descr_r()
+    data_r.work <- data_descr_r()
     data_r.work
   })
 
@@ -342,8 +343,8 @@ shinyServer(function(input, output, session) {
         exact=0L
 
         if (input$addDif==0){difmin=0L
-        Fstat <<- Fbar.ineq(data_r.work,Amat)[1]
-        Fstat0 <<- Fbar.ineq(data_o.work,Amat)[1]
+        Fstat <- Fbar.ineq(data_r.work,Amat)[1]
+        Fstat0 <- Fbar.ineq(data_o.work,Amat)[1]
         statistic="ineq"; effectsize=FALSE}
         if (input$addDif==1){ #absolute differences
 
@@ -354,8 +355,8 @@ shinyServer(function(input, output, session) {
 
           validate(need(difmin!="",message="Provide minimum differences."))
 
-          Fstat <<- Fbar.dif(data_r.work,Amat,difmin)[1]
-          Fstat0 <<- Fbar.dif(data_o.work,Amat,difmin)[1]
+          Fstat <- Fbar.dif(data_r.work,Amat,difmin)[1]
+          Fstat0 <- Fbar.dif(data_o.work,Amat,difmin)[1]
           statistic="dif"; effectsize=FALSE}
         if (input$addDif==2){ #effect size differences
 
@@ -366,8 +367,8 @@ shinyServer(function(input, output, session) {
 
           validate(need(difmin!="",message="Provide minimum differences."))
 
-          Fstat <<- Fbar.dif(data_r.work,Amat,difmin,effectsize=TRUE)[1]
-          Fstat0 <<- Fbar.dif(data_o.work,Amat,difmin,effectsize=TRUE)[1]
+          Fstat <- Fbar.dif(data_r.work,Amat,difmin,effectsize=TRUE)[1]
+          Fstat0 <- Fbar.dif(data_o.work,Amat,difmin,effectsize=TRUE)[1]
           statistic="dif"; effectsize=TRUE}
       }
 
@@ -375,8 +376,8 @@ shinyServer(function(input, output, session) {
         Amat = 0L; difmin=0L
         exact = as.numeric(unlist(strsplit(input$exactval,",")))
         validate(need(exact!="",message="Provide the values to replicate."))
-        Fstat <<- Fbar.exact(data_r.work,exact)[1]
-        Fstat0 <<- Fbar.exact(data_o.work,exact)[1]
+        Fstat <- Fbar.exact(data_r.work,exact)[1]
+        Fstat0 <- Fbar.exact(data_o.work,exact)[1]
         statistic="exact"; effectsize=FALSE}
 
       if (input$typehypothesis == "man"){
@@ -385,14 +386,14 @@ shinyServer(function(input, output, session) {
         if (input$addDifm==2){difmin <- as.numeric(unlist(strsplit(input$difminm,",")));effectsize=TRUE}
         if (input$addDifm==0){difmin <- create_matrices(unlist(strsplit(input$varnames,",")),input$hyp)$difmin;effectsize=FALSE}
         statistic="dif"
-        Fstat <<- Fbar.dif(data_r.work,Amat,difmin,effectsize=effectsize)[1]
-        Fstat0 <<- Fbar.dif(data_o.work,Amat,difmin,effectsize=effectsize)[1]}
+        Fstat <- Fbar.dif(data_r.work,Amat,difmin,effectsize=effectsize)[1]
+        Fstat0 <- Fbar.dif(data_o.work,Amat,difmin,effectsize=effectsize)[1]}
 
       output_G <- output_Gibbs()
       validate(need(Fstat0==0,"The constraints should be in line with the original data, please correct the hypothesis."))
-      outputppc <<- prior.predictive.check(n=n.r,posterior=output_G,F_n=Fstat,statistic=statistic,
-                                           Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize,seed=as.numeric(input$seed))
-      Fbar <<- outputppc$F_sim
+      outputppc <- prior.predictive.check(n=n.r,posterior=output_G,F_n=Fstat,statistic=statistic,
+                                          Amat=Amat,exact=exact,difmin=difmin,effectsize=effectsize,seed=as.numeric(input$seed))
+      Fbar <- outputppc$F_sim
     })
   })
 
@@ -420,7 +421,7 @@ shinyServer(function(input, output, session) {
   observe({
     if (is.null(results.ppc())){return()}
     #par(mar = rep(2, 4))
-    h <<- hist(Fbar[-which(Fbar==Mode(Fbar))],breaks=20)
+    h <- hist(Fbar[-which(Fbar==Mode(Fbar))],breaks=20)
   })
 
   plotInput <- function(){
@@ -518,25 +519,25 @@ shinyServer(function(input, output, session) {
         exact_N=0L;
 
         if (input$addDif_N==0){difmin_N=0L; effectsize_N = FALSE; statistic_N="ineq"
-        Fstat0p <<- Fbar.ineq(data_o.work,Amat_N)[1]}
+        Fstat0p <- Fbar.ineq(data_o.work,Amat_N)[1]}
         if (input$addDif_N==1){ #absolute differences
           difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
           difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
           difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
           difmin_N <- do.call(c,difmin_3); effectsize_N = FALSE; statistic_N="dif"
-          Fstat0p <<- Fbar.dif(data_o.work,Amat_N,difmin_N)[1]}
+          Fstat0p <- Fbar.dif(data_o.work,Amat_N,difmin_N)[1]}
         if (input$addDif_N==2){ #effect size differences
           difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
           difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
           difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
           difmin_N <- do.call(c,difmin_3)
           effectsize_N = TRUE; statistic_N="dif"
-          Fstat0p <<- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize=effectsize_N)[1]}
+          Fstat0p <- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize=effectsize_N)[1]}
       }
       if (input$typehypothesis_N == "exact"){
         Amat_N = 0L; difmin_N=0L; statistic_N="exact"; effectsize_N = FALSE
         exact_N = as.numeric(unlist(strsplit(input$exactval_N,",")))
-        Fstat0p <<- Fbar.exact(data_o.work,exact_N)[1]}
+        Fstat0p <- Fbar.exact(data_o.work,exact_N)[1]}
 
       if (input$typehypothesis_N == "man"){
         Amat_N <- create_matrices(unlist(strsplit(input$varnames_N,",")),input$hyp_N)$Amat
@@ -550,7 +551,7 @@ shinyServer(function(input, output, session) {
           difmin_N <- create_matrices(unlist(strsplit(input$varnames_N,",")),input$hyp_N)$difmin
           effectsize_N=FALSE}
         statistic_N="dif"
-        Fstat0s <<- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize=effectsize_N)[1]}
+        Fstat0s <- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize=effectsize_N)[1]}
 
       if(input$Ha == FALSE){
         g.m_N<-as.numeric(unlist(strsplit(input$Ha_N,",")))}else{
@@ -559,9 +560,9 @@ shinyServer(function(input, output, session) {
       output_G <- output_Gibbs()
       validate(need(Fstat0p==0,"The constraints should be in line with the original data, please correct the hypothesis."))
 
-      outputpowercalc <<- power.calc(n.r=n.r,posterior=output_G,g.m=g.m_N,p.sd=pooled.sd(data_o.work),
-                                     statistic=statistic_N,Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
-                                     alpha=as.numeric(input$alpha))
+      outputpowercalc <- power.calc(n.r=n.r,posterior=output_G,g.m=g.m_N,p.sd=pooled.sd(data_o.work),
+                                    statistic=statistic_N,Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
+                                    alpha=as.numeric(input$alpha))
     })
   })
 
@@ -625,26 +626,26 @@ shinyServer(function(input, output, session) {
         exact_N=0L;
 
         if (input$addDif_N==0){difmin_N=0L; effectsize_N = FALSE; statistic_N="ineq"
-        Fstat0s <<- Fbar.ineq(data_o.work,Amat_N)[1]}
+        Fstat0s <- Fbar.ineq(data_o.work,Amat_N)[1]}
         if (input$addDif_N==1){ #absolute differences
           difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
           difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
           difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
           difmin_N <- do.call(c,difmin_3)
           effectsize_N = FALSE; statistic_N="dif"
-          Fstat0s <<- Fbar.dif(data_o.work,Amat_N,difmin_N)[1]}
+          Fstat0s <- Fbar.dif(data_o.work,Amat_N,difmin_N)[1]}
         if (input$addDif_N==2){ #effect size differences
           difmin_1 <- lapply(1:input$nh_N, function(i) input[[paste0('difmin_N', i)]])
           difmin_2 <- lapply(1:input$nh_N,function(i) unlist(strsplit(difmin_1[[i]],",")))
           difmin_3 <- lapply(1:input$nh_N,function(i) as.numeric(difmin_2[[i]]))
           difmin_N <- do.call(c,difmin_3)
           effectsize_N = TRUE; statistic_N="dif"
-          Fstat0s <<- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize_N)[1]}
+          Fstat0s <- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize_N)[1]}
       }
       if (input$typehypothesis_N == "exact"){
         Amat_N = 0L; difmin_N=0L; statistic_N="exact"; effectsize_N = FALSE
         exact_N = as.numeric(unlist(strsplit(input$exactval_N,",")))
-        Fstat0s <<- Fbar.exact(data_o.work,exact_N)[1]}
+        Fstat0s <- Fbar.exact(data_o.work,exact_N)[1]}
 
       if (input$typehypothesis_N == "man"){
         Amat_N <- create_matrices(unlist(strsplit(input$varnames_N,",")),input$hyp_N)$Amat
@@ -658,7 +659,7 @@ shinyServer(function(input, output, session) {
           difmin_N <- create_matrices(unlist(strsplit(input$varnames_N,",")),input$hyp_N)$difmin
           effectsize_N=FALSE}
         statistic_N="dif"
-        Fstat0s <<- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize_N)[1]}
+        Fstat0s <- Fbar.dif(data_o.work,Amat_N,difmin_N,effectsize_N)[1]}
 
       if(input$Ha == FALSE){
         g.m_N<-as.numeric(unlist(strsplit(input$Ha_N,",")))}else{
@@ -667,12 +668,12 @@ shinyServer(function(input, output, session) {
       output_G <- output_Gibbs()
       validate(need(Fstat0s==0,"The constraints should be in line with the original data, please correct the hypothesis."))
 
-      outputsampcalc <<- sample.size.calc(start_n=as.numeric(input$start_n),itmax=as.numeric(input$maxit),
-                                          powtarget=as.numeric(input$Powtarget),powmargin=as.numeric(input$Powmargin),
-                                          posterior=output_G,g.m=g.m_N,p.sd=pooled.sd(data_o.work),
-                                          statistic=statistic_N,
-                                          Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
-                                          nmax=as.numeric(input$maxN),alpha=as.numeric(input$alpha))
+      sample.size.calc(start_n=as.numeric(input$start_n),itmax=as.numeric(input$maxit),
+                       powtarget=as.numeric(input$Powtarget),powmargin=as.numeric(input$Powmargin),
+                       posterior=output_G,g.m=g.m_N,p.sd=pooled.sd(data_o.work),
+                       statistic=statistic_N,
+                       Amat=Amat_N,exact=exact_N,difmin=difmin_N,effectsize=effectsize_N,
+                       nmax=as.numeric(input$maxN),alpha=as.numeric(input$alpha))
 
     })
   })
@@ -685,7 +686,7 @@ shinyServer(function(input, output, session) {
 
   output$sampcalc <- renderPrint({
     if (is.null(results.ppp())){return(invisible())}
-    outputsampcalc
+    results.ppp()
   })
 
   output$Fpspower<- renderPlot({

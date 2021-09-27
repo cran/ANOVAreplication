@@ -11,6 +11,9 @@ generate.data(n,mean,sd)
   \item{mean}{integer; mean of the data.}
   \item{sd}{integer; standard deviation of the data.}
 }
+\value{
+Generates a random value vector of length n with the specified mean and standard deviation.
+}
 \examples{
 #simple example
 data1 <- generate.data(n=10,mean=5,sd=1)

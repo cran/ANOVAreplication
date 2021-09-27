@@ -36,25 +36,28 @@ Gibbs.ANOVA <- function(data,it=5000,burnin=500,seed=0){
   par1=cbind(b1,s1)[-c(1:burnin),]
   par2=cbind(b2,s2)[-c(1:burnin),]
   par=list(par1,par2)
-  output_m <- rbind(par1,par2)
-  colnames(output_m) <- paste("Mean",1:(G+1))
-  colnames(output_m)[G+1] <- "SD"
+  posterior <- rbind(par1,par2)
+  colnames(posterior) <- paste("Mean",1:(G+1))
+  colnames(posterior)[G+1] <- "SD"
 
+  #save and restore user par
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
+  #set par for output plots
   par(mfrow = c(G+1, 2), mar = rep(2, 4))
 
   for (j in 1:(G+1)) {
 
-    hist(output_m[,j], breaks="Scott", main=colnames(par)[j], xlab="Value")
-    abline(v=quantile(output_m[,j], probs=c(0.025, 0.975)), col="blue")
+    hist(posterior[,j], breaks="Scott", main=colnames(par)[j], xlab="Value")
+    abline(v=quantile(posterior[,j], probs=c(0.025, 0.975)), col="blue")
 
     plot.ts(cbind(par1[,j],par2[,j]),col=c("blue","green"), plot.type="single",ylab="")
 
   }
 
-  results <- cbind(round(apply(output_m,2,mean),4),round(apply(output_m,2,median),4),
-                   round(apply(output_m,2,sd),4))
+  results <- cbind(round(apply(posterior,2,mean),4),round(apply(posterior,2,median),4),
+                   round(apply(posterior,2,sd),4))
   colnames(results) <- c("mean","median","sd")
-  print(results)
-  output <- list("summary"=results,"posterior"=output_m)
-  return(output)
+  output <- list("summary"=results,"posterior"=posterior)
+  #return(output)
 }

@@ -1,7 +1,7 @@
 sample.size.calc <- function(start_n=20,itmax=10,nmax=600,powtarget=.825,powmargin=.025,
                              posterior,g.m,p.sd,
                              statistic,Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,
-                             alpha=.05){
+                             alpha=.05,printit=TRUE){
   it=0; power.out=0
   Npower.l <- matrix(NA,ncol=2,nrow=itmax)
   colnames(Npower.l) <- c("n per group","Power")
@@ -13,18 +13,18 @@ sample.size.calc <- function(start_n=20,itmax=10,nmax=600,powtarget=.825,powmarg
   while(exit==FALSE&&it<itmax&&
         (power.out<(powtarget-powmargin)|power.out>(powtarget+powmargin))){
     it=it+1
-    print(it)
+    if(printit==TRUE){print(it)}
     if(it>itmax){ #when max iteration, stop before next loop (exit = TRUE)
-      print("The maximum number of iterations has been reached")
+      warning("The maximum number of iterations has been reached")
       exit=TRUE}
     if(Npower>=nmax){ #when max sample size is reached, stop before next loop (exit = TRUE)
       Npower = nmax
-      print("The total sample size was reset to its maximum (default = 600) to limit computational time")
+      warning("The total sample size was reset to its maximum (default = 600) to limit computational time")
       exit=TRUE}
     if(Npower<20){    #min sample size, avoiding negative sample sizes
       Npower = 20
       print(Npower.l)
-      print("The total sample size was reset to its minimum of 20")}
+      warning("The total sample size was reset to its minimum of 20")}
     nF <- ceiling(c(rep(Npower/p,p)))   #subsample sizes, equal over groups
     Npower <- sum(nF)                   #actual sample size after equal groups
 
@@ -52,8 +52,8 @@ sample.size.calc <- function(start_n=20,itmax=10,nmax=600,powtarget=.825,powmarg
     #b) multiply sample size with x, where x is the ratio of current power and target power
     if(it>1&&power.out<(powtarget-powmargin)){
       if(round(Npower.l[it,2],2)==round(Npower.l[it-1,2],2)){exit=TRUE;
-      print("No change in power. Potentially a maximum power level is reached. Limitations to power can be further explored with the complexity function")}
-      if(Npower.l[it,1]==Npower.l[it-1,1]){exit=TRUE; print("No sample size variation")}
+      warning("No change in power. Potentially a maximum power level is reached. Limitations to power can be further explored with the complexity function")}
+      if(Npower.l[it,1]==Npower.l[it-1,1]){exit=TRUE; warning("No sample size variation")}
 
       if(it==3){
         pow.coef <- lm(Npower.l[,2]~Npower.l[,1]+I(Npower.l[,1]^2))$coefficients #power coefficients

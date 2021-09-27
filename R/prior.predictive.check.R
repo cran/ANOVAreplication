@@ -67,6 +67,10 @@ prior.predictive.check <- function(n,posterior,statistic,obs=TRUE,F_n,
     #abline(v=F_n,col="red")
 
     #make plot 2
+    #save and restore user par
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
+    #set par for output plots
     par(mfrow=c(1,1),mar=c(5.1,4.1,4.1,2.1))
     Mode <- function(x) {
       ux <- unique(x)

@@ -13,7 +13,7 @@ Gibbs.ANOVA(data,it=5000,burnin=500,seed=0)
 \item{seed}{integer; seed value. If seed==0, no seed is set.}
 }
 \value{
-\item{output_m}{a matrix with all samples from the posterior for each parameter.}
+\item{posterior}{a matrix with all samples from the posterior for each parameter.}
 
 Returns a matrix with the mean, median, and standard deviation (in columns) for the it samples from the conditional posterior distributions of the group means and pooled standard deviation (rows).
 

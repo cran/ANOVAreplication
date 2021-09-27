@@ -5,13 +5,14 @@
 \description{
 Calculates the required sample size for a new study to conduct the prior predictive check with sufficient statistical power.}
 \usage{
-sample.size.calc(start_n,itmax=10,nmax=600,powtarget=.825,powmargin=.025,
+sample.size.calc(start_n=20,itmax=10,nmax=600,powtarget=.825,powmargin=.025,
                  posterior,g.m,p.sd,
-                 statistic,Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,alpha=.05)
+                 statistic,Amat=0L,exact=0L,difmin=0L,effectsize=FALSE,
+                 alpha=.05,printit=TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{start_n}{integer; the starting value for the sample size per group.}
+  \item{start_n}{integer; the starting value for the sample size per group. Defaults to 20.}
   \item{itmax}{integer; the maximum number of iterations for the function.}
   \item{nmax}{integer; the maximum total sample size to evaluate.}
   \item{powtarget}{integer; the target power for which the sample size is to be obtained.}
@@ -24,7 +25,8 @@ sample.size.calc(start_n,itmax=10,nmax=600,powtarget=.825,powmargin=.025,
 \item{exact}{a vector of length p, where p is the number of means in the ANOVA model, with the exact values of the constrained hypothesis.}
 \item{difmin}{a vector of length q with the minimum difference per constraint as specified in \code{Amat}.}
 \item{effectsize}{logical; If TRUE the values in \code{difmin} are interpreted as Cohen's d.}
-  \item{alpha}{integer; the level of alpha that should be taken into account while calculating the required sample size.}
+\item{alpha}{integer; the level of alpha that should be taken into account while calculating the required sample size.}
+\item{printit}{logical; If TRUE the current iteration is printed to provide an indication of progress. Default is TRUE.}
 }
 
 \value{
@@ -69,7 +71,7 @@ sd.g <- aggregate(data_o$y,by=list(data_o$g),sd)[,2]
 n.g <- table(data_o$g)
 p.sd<- pooled.sd(data_o)
 
-Gibbs.ANOVA(data_o)
+post <- Gibbs.ANOVA(data_o)
 #create matrices HR: g4>(g1,g2,g3). g4-g1>0.8, g4-g2>0.5, g4-g3>0.2
 HR <- create_matrices(varnames = c("g1","g2","g3","g4"),
                       hyp = "g4-g1>0.8 & g4-g2>0.5 & g4-g3>0.2")
@@ -78,7 +80,7 @@ Amat <- HR$Amat
 difmin <- HR$difmin
 
 #sample size calculator
-sample.size.calc(start_n=30, powtarget=.825,powmargin=.025,posterior=output_m,
+sample.size.calc(start_n=30, powtarget=.825,powmargin=.025,posterior=post$posterior,
                  g.m=rep(mean(data_o$y),4),p.sd=p.sd,
                  statistic="dif",effectsize=TRUE,Amat=Amat,difmin=difmin)
 }
